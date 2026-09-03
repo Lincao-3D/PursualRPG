@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Godot;
 
+namespace PursualRPG.Scripts.Domain;
+
 public enum SkillEnum
 {
     AccurateAttack,
@@ -155,7 +157,7 @@ public static class SkillFactoryRegistry
                 Description = "Deal 1 + intelligence modifier damage without attack",
                 IsCombat = true,
                 SkipTurn = true,
-                ExecuteFunc = (player, target, combat, rawD20) => target.ApplyDamage(1 + player.GetSpellDamageMod(), DamageType.Magical, combat),
+                ExecuteFunc = (player, target, combat, rawD20) => target.ApplyDamage(player, 1 + player.GetSpellDamageMod(), DamageType.Magical, combat),
                 Enum = SkillEnum.GuidedMagicMissile
             }
         },
@@ -224,7 +226,7 @@ public static class SkillFactoryRegistry
                 Name = "Sleep Song",
                 MinLevel = 1,
                 Cost = 10,
-                Classes = new() { CharacterClassEnum.Bards }, // Adjust if needed
+                Classes = new() { CharacterClassEnum.Bard }, // Adjust if needed
                 Description = "Roll two d10s, if the result is greater than or equal to the target's total health, they will be stunned for 10 rounds",
                 ExecuteFunc = SkillActions.SleepSong,
                 Enum = SkillEnum.SleepSong

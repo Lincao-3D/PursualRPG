@@ -1,6 +1,8 @@
 using Godot;
 using System;
 
+namespace PursualRPG.Scripts.Core;
+
 public partial class ModalService : CanvasLayer
 {
     public static ModalService Instance { get; private set; }

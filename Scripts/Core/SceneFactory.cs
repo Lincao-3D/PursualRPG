@@ -1,6 +1,8 @@
 using Godot;
 
-public class SceneFactory
+namespace PursualRPG.Scripts.Core;
+
+public static class SceneFactory
 {
     public static Control CreateScene(string scenePath)
     {

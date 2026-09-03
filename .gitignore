@@ -29,6 +29,7 @@ export_credentials.cfg
 # JetBrains Rider (A very common IDE for Godot .NET)
 .idea/
 *.sln.iml
+*sln
 
 # NuGet lock files
 project.lock.json

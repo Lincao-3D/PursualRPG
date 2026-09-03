@@ -20,7 +20,6 @@ namespace PursualRPG.Scripts.AI
 
             string response = await _llmClient.GenerateContentAsync("You are an RPG Game Master.", message);
             
-            // Queue response for smooth typewriter stream simulation
             foreach (char c in response)
             {
                 _tokenQueue.Enqueue(c);
@@ -30,16 +29,14 @@ namespace PursualRPG.Scripts.AI
             onComplete?.Invoke(response);
         }
 
-        public bool ValidateAndDeserializePayload(string rawJson, out Godot.Collections.Dictionary parsedData)
+        public bool TryParseResponse(string rawInput, out AIResponse response)
         {
-            parsedData = null;
-            var json = new Json();
-            if (json.Parse(rawJson) == Error.Ok)
-            {
-                parsedData = json.Data.AsGodotDictionary();
-                return true;
-            }
-            return false;
+            return AIMessageParser.TryParseResponse(rawInput, out response);
+        }
+
+        public bool ValidateAndDeserializePayload(string rawJson, out AIResponse response)
+        {
+            return TryParseResponse(rawJson, out response);
         }
     }
 }

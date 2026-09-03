@@ -1,11 +1,11 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks; // Fixes "The name 'Task' does not exist"
-using PursualRPG.Scripts.Domain; // Fixes "DamageType does not exist"
+using System.Text.Json;
+using System.Threading.Tasks;
+using PursualRPG.Scripts.Domain;
 using PursualRPG.Scripts.AI;
-using PursualRPG.Scripts.Core; // Fixes Core namespace issue
+using PursualRPG.Scripts.Core;
 
 namespace PursualRPG.Scripts.Scenes
 {
@@ -36,7 +36,6 @@ namespace PursualRPG.Scripts.Scenes
             _combatButton.Visible = false;
             _combatButton.Disabled = true;
 
-            // Load Scenario (matching Python initial instructions & initial_message)
             _scenario = Scenario.DefaultScenario;
             InitializeChatHistory();
         }
@@ -46,13 +45,11 @@ namespace PursualRPG.Scripts.Scenes
             _historyText.Text = $"DM:\n{_scenario.InitialMessage}\n";
         }
 
-        // Resolves the Split() and 'char' indexing errors with a native typewriter effect
-        public async Task DisplayChatCardAsync(AIPayload card)
+        public async Task DisplayChatCardAsync(ChatMessage card)
         {
-            // Translating character names/roles using Tr()
-            _historyText.AppendText($"\n[color=yellow]{Tr(card.Speaker)}:[/color] ");
+            string speakerName = string.IsNullOrEmpty(card.SpeakerKey) ? "DM" : Tr(card.SpeakerKey);
+            _historyText.AppendText($"\n[color=yellow]{speakerName}:[/color] ");
             
-            // In C#, iterate directly over the string natively without Split("")
             foreach (char c in card.Text)
             {
                 _historyText.AppendText(c.ToString());
@@ -62,14 +59,14 @@ namespace PursualRPG.Scripts.Scenes
             _userInput.Visible = !card.IsNarrative;
             if (_submitButton != null) _submitButton.Visible = !card.IsNarrative;
             
-            if (card.Choices != null && card.Choices.Length > 0)
+            if (card.Choices != null && card.Choices.Count > 0)
             {
                 _historyText.AppendText($"\n\n[b]{Tr("TXT_YOUR_OPTIONS")}:[/b]\n");
-                for (int i = 0; i < card.Choices.Length; i++)
+                for (int i = 0; i < card.Choices.Count; i++)
                 {
-                    // Tr() wraps the dynamic AI choices if they match predefined keys, 
-                    // or renders the raw text directly if there is no key match.
-                    _historyText.AppendText($"[color=cyan]{i + 1}[/color]. {Tr(card.Choices[i])}\n");
+                    var choice = card.Choices[i];
+                    string choiceText = !string.IsNullOrEmpty(choice.TextKey) ? Tr(choice.TextKey) : choice.Value;
+                    _historyText.AppendText($"[color=cyan]{i + 1}[/color]. {choiceText}\n");
                 }
             }
         }
@@ -112,7 +109,7 @@ namespace PursualRPG.Scripts.Scenes
 
         private void HandleCommand(string commandText)
         {
-            var parts = commandText[1:].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var parts = commandText[1..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) return;
             string cmd = parts[0].ToLower();
 
@@ -142,7 +139,6 @@ namespace PursualRPG.Scripts.Scenes
             }
             else
             {
-                // Fallback for testing without active broker node export
                 await Task.Delay(500);
                 ReceiveLLMResponse("The shadows grow longer as you ponder your next move. ```json\n{ \"tool\": \"none\" }\n```");
             }
@@ -150,50 +146,48 @@ namespace PursualRPG.Scripts.Scenes
 
         private void ReceiveLLMResponse(string responseText)
         {
-            ExtractAndApplyJsonPayloads(responseText);
-            responseText = Regex.Replace(responseText, @"```json\s*.*?\s*```", "", RegexOptions.Singleline);
-            AppendLog($"DM: {responseText}\n");
-        }
-
-        private void ExtractAndApplyJsonPayloads(string text)
-        {
-            var matches = Regex.Matches(text, @"```json\s*(.*?)\s*```", RegexOptions.Singleline);
-            foreach (Match match in matches)
+            var broker = MessageBroker ?? new AIMessageBroker();
+            if (broker.TryParseResponse(responseText, out var aiResponse))
             {
-                try
+                foreach (var msg in aiResponse.Messages)
                 {
-                    string jsonStr = match.Groups[1].Value;
-                    var json = new Json();
-                    if (json.Parse(jsonStr) == Error.Ok)
-                    {
-                        var dict = json.Data.AsGodotDictionary();
-                        if (dict.ContainsKey("tool"))
-                        {
-                            string toolName = dict["tool"].AsString();
-                            ExecuteToolAction(toolName, dict);
-                        }
-                    }
+                    _ = DisplayChatCardAsync(msg);
                 }
-                catch (Exception e)
+
+                foreach (var toolCmd in aiResponse.ToolCommands)
                 {
-                    GD.PrintErr($"Failed to parse JSON tool payload: {e.Message}");
+                    ExecuteToolAction(toolCmd);
                 }
+            }
+            else
+            {
+                AppendLog($"DM: {responseText}\n");
             }
         }
 
-        private void ExecuteToolAction(string toolName, Godot.Collections.Dictionary data)
+        private void ExecuteToolAction(AIToolCommand command)
         {
-            if (toolName == "initialize_combat")
+            if (command.Name == "initialize_combat")
             {
                 var enemies = new List<Entity> { MonsterFactory.GetFactories()[EnemyEnum.Skeleton] };
                 _eminentCombat = new Combat(this, enemies, fleeable: true);
                 WaitCombatConfirm(_eminentCombat);
             }
-            else if (toolName == "reward_player")
+            else if (command.Name == "reward_player")
             {
-                int gold = data.ContainsKey("gold") ? (int)data["gold"].AsInt64() : 10;
-                int xp = data.ContainsKey("xp") ? (int)data["xp"].AsInt64() : 50;
-                if (GameManager.Instance.CurrentPlayer != null)
+                int gold = 10;
+                int xp = 50;
+
+                if (command.Arguments.TryGetValue("gold", out var goldElem))
+                {
+                    if (goldElem.ValueKind == JsonValueKind.Number) gold = goldElem.GetInt32();
+                }
+                if (command.Arguments.TryGetValue("xp", out var xpElem))
+                {
+                    if (xpElem.ValueKind == JsonValueKind.Number) xp = xpElem.GetInt32();
+                }
+
+                if (GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
                 {
                     GameManager.Instance.CurrentPlayer.Gold += gold;
                     GameManager.Instance.CurrentPlayer.Xp += xp;
@@ -206,7 +200,7 @@ namespace PursualRPG.Scripts.Scenes
         {
             _submitButton.Visible = false;
             _userInput.Visible = false;
-            _combatButton.Visible = false; // Trigger transition directly or via button
+            _combatButton.Visible = false;
             GetTree().ChangeSceneToFile("res://Scenes/CombatScene.tscn");
         }
 

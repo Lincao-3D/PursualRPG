@@ -8,12 +8,13 @@ namespace PursualRPG.Scripts.Domain
     {
         public static Dictionary<CharacterAttrib, int> SumAttrib(Dictionary<CharacterAttrib, int> currentAttrib, CharacterRace race)
         {
+            var result = new Dictionary<CharacterAttrib, int>(currentAttrib);
             var bonusMap = SkillsBonus.GetValueOrDefault(race, new());
             foreach (var kvp in bonusMap)
             {
-                currentAttrib[kvp.Key] = currentAttrib.GetValueOrDefault(kvp.Key, 0) + kvp.Value;
+                result[kvp.Key] = result.GetValueOrDefault(kvp.Key, 0) + kvp.Value;
             }
-            return currentAttrib;
+            return result;
         }
 
         private static readonly Dictionary<CharacterRace, Dictionary<CharacterAttrib, int>> SkillsBonus = new()

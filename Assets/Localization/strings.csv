@@ -1,0 +1,17 @@
+keys,en_US,pt_BR
+CHAT_DM,Game Master,Mestre de Jogo
+TXT_YOUR_OPTIONS,Your Options,Suas Opções
+BTN_SUBMIT,Submit,Enviar
+BTN_COMBAT,Start Combat,Iniciar Combate
+BTN_PLAY,New Game,Novo Jogo
+BTN_CONTINUE,Continue,Continuar
+BTN_OPTIONS,Options,Opções
+BTN_QUIT,Quit,Sair
+BTN_BACK,Back,Voltar
+BTN_MUTE,Mute Audio,Mutar Áudio
+TITLE_GAME,Pursual RPG,Pursual RPG
+TITLE_CHARACTER_CREATOR,Character Creation,Criação de Personagem
+TITLE_SCENARIO_ASSISTANT,Scenario Assistant,Assistente de Cenário
+LABEL_ENTER_NAME,Enter Name:,Digite o Nome:
+LABEL_SELECT_RACE,Select Race:,Selecione a Raça:
+LABEL_SELECT_CLASS,Select Class:,Selecione a Classe:

@@ -27,7 +27,7 @@ namespace PursualRPG.Scripts.AI
                 contents = new[] { new { role = "user", parts = new[] { new { text = userMessage } } } }
             };
 
-            string jsonPayload = Json.Stringify(payload);
+            string jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
             string[] headers = new[] { "Content-Type: application/json" };
 
             var error = _httpRequest.Request(url, headers, HttpClient.Method.Post, jsonPayload);
