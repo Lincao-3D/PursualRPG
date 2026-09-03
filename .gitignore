@@ -1,0 +1,47 @@
+# ==========================================
+# Godot 4+ - Generated Files and Caches
+# ==========================================
+.godot/
+
+# Temporary export credentials file (may contain passwords)
+export_credentials.cfg
+
+# If you want to ignore entire export presets, uncomment the line below.
+# Warning: This will prevent export configurations from being shared on Git.
+# export_presets.cfg
+
+# Automatically generated imported translations from CSV files
+*.translation
+
+# ==========================================
+# .NET / C# / Visual Studio & Rider Caches
+# ==========================================
+# .NET build directories
+**/bin/
+**/obj/
+
+# MSBuild / Visual Studio caches and files
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+
+# JetBrains Rider (A very common IDE for Godot .NET)
+.idea/
+*.sln.iml
+
+# NuGet lock files
+project.lock.json
+project.fragment.lock.json
+
+# .NET tools caches
+.tools/
+
+# Context folder:
+context_builder_rs
+
+# ==========================================
+# Operating System (Optional, but recommended)
+# ==========================================
+.DS_Store
+Thumbs.db

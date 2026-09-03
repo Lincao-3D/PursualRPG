@@ -1,0 +1,16 @@
+[application]
+
+config/name="PursualRPG"
+run/main_scene="res://Scenes/SplashScene.tscn"
+config/features=PackedStringArray("4.3", "C#", "Forward Plus")
+config/icon="res://icon.png"
+
+[autoload]
+
+GameManager="*res://Scripts/Core/GameManager.cs"
+ModalService="*res://Scripts/Core/ModalService.cs"
+SynthAudioServer="*res://Scripts/Core/SynthAudioServer.cs"
+
+[dotnet]
+
+project/assembly_name="PursualRPG"
