@@ -1,5 +1,6 @@
 using Godot;
 using System.IO;
+using PursualRPG.Scripts.Core;
 
 namespace PursualRPG.Scripts.Scenes
 {
@@ -19,38 +20,31 @@ namespace PursualRPG.Scripts.Scenes
             _btnGenerate = GetNode<Button>("BtnGenerate");
             _btnBack = GetNode<Button>("BtnBack");
 
+            _btnCompile.Text = Tr("BTN_COMPILE");
+            _btnGenerate.Text = Tr("BTN_GENERATE");
+            _btnBack.Text = Tr("BTN_BACK");
+
+            FontService.ApplyFont(_worldInput, FontType.ChatReading);
+            FontService.ApplyFont(_outputView, FontType.ChatReading);
+            _btnCompile.BindAudioAndFont(FontType.SecondaryButton);
+            _btnGenerate.BindAudioAndFont(FontType.SecondaryButton);
+            _btnBack.BindAudioAndFont(FontType.SecondaryButton);
+
             _btnCompile.Pressed += OnCompileMechanics;
             _btnGenerate.Pressed += OnGenerateWorld;
-            _btnBack.Pressed += OnBackToOptions;
+            _btnBack.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/OptionsScene.tscn");
         }
 
         private void OnCompileMechanics()
         {
             string modelPath = ProjectSettings.GlobalizePath("res://Scripts/Domain");
-            if (!Directory.Exists(modelPath))
-            {
-                _outputView.Text = "[Error] Domain model directory not found.";
-                return;
-            }
-
-            _outputView.Text = "[System] Successfully compiled C# domain mechanics for AI context injection.";
+            _outputView.Text = Directory.Exists(modelPath) ? Tr("MSG_DOMAIN_COMPILED") : Tr("ERR_DOMAIN_DIRECTORY_NOT_FOUND");
         }
 
         private void OnGenerateWorld()
         {
             string idea = _worldInput.Text.Trim();
-            if (string.IsNullOrEmpty(idea))
-            {
-                _outputView.Text = "[Warning] Please enter a chronicle concept first.";
-                return;
-            }
-
-            _outputView.Text = $"[System] Requesting new world configuration for: '{idea}'...";
-        }
-
-        private void OnBackToOptions()
-        {
-            GetTree().ChangeSceneToFile("res://Scenes/OptionsScene.tscn");
+            _outputView.Text = string.IsNullOrEmpty(idea) ? Tr("WARN_ENTER_SCENARIO_CONCEPT") : string.Format(Tr("MSG_REQUESTING_WORLD_CONFIGURATION"), idea);
         }
     }
 }

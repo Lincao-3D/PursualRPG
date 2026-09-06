@@ -1,4 +1,5 @@
 using Godot;
+using System.Collections.Generic;
 using PursualRPG.Scripts.Domain;
 
 namespace PursualRPG.Scripts.UI
@@ -16,6 +17,14 @@ namespace PursualRPG.Scripts.UI
         [Export] public Label StatsLabel;
         [Export] public Label AttributesLabel;
         [Export] public Label SkillsLabel;
+
+        public override void _Ready()
+        {
+            if (NameLabel == null) NameLabel = GetNodeOrNull<Label>("NameLabel");
+            if (StatsLabel == null) StatsLabel = GetNodeOrNull<Label>("StatsLabel");
+            if (AttributesLabel == null) AttributesLabel = GetNodeOrNull<Label>("AttributesLabel");
+            if (SkillsLabel == null) SkillsLabel = GetNodeOrNull<Label>("SkillsLabel");
+        }
 
         public void Initialize(Player player)
         {
@@ -44,9 +53,31 @@ namespace PursualRPG.Scripts.UI
 
         private void UpdatePanelContent()
         {
-            if (_player == null) return;
-            if (NameLabel != null) NameLabel.Text = _player.Name;
-            if (StatsLabel != null) StatsLabel.Text = $"HP: {_player.Health}/{_player.MaxHealth}\nMana: {_player.Mana}/{_player.MaxMana}\nGold: {_player.Gold}";
+            if (_player == null)
+                return;
+
+            if (NameLabel != null)
+                NameLabel.Text = _player.Name;
+
+            if (StatsLabel != null)
+            {
+                StatsLabel.Text =
+                    $"HP: {_player.Health}/{_player.MaxHealth}\n" +
+                    $"Mana: {_player.Mana}/{_player.MaxMana}\n" +
+                    $"Gold: {_player.Gold}";
+            }
+
+            if (AttributesLabel != null)
+            {
+                var attributes = _player.Attributes;
+                AttributesLabel.Text =
+                    $"STR: {attributes.GetValueOrDefault(CharacterAttrib.Strength)}\n" +
+                    $"DEX: {attributes.GetValueOrDefault(CharacterAttrib.Dexterity)}\n" +
+                    $"CON: {attributes.GetValueOrDefault(CharacterAttrib.Constitution)}\n" +
+                    $"INT: {attributes.GetValueOrDefault(CharacterAttrib.Intelligence)}\n" +
+                    $"WIS: {attributes.GetValueOrDefault(CharacterAttrib.Wisdom)}\n" +
+                    $"CHA: {attributes.GetValueOrDefault(CharacterAttrib.Charisma)}";
+            }
         }
     }
 }

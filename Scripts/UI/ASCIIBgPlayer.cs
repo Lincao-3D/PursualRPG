@@ -2,6 +2,7 @@ using Godot;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using PursualRPG.Scripts.Core;
 
 namespace PursualRPG.Scripts.UI
 {
@@ -15,12 +16,32 @@ namespace PursualRPG.Scripts.UI
         private List<string> _frameContents = new();
         private int _currentFrameIdx = 0;
         private double _lastFrameTime = 0.0;
+        
+        private RichTextLabel _displayLabel;
 
         public override void _Ready()
         {
             _effectiveFps = BaseFps / Mathf.Max(1.0f, Slowdown);
             _frameDelay = 1.0f / _effectiveFps;
             LoadFramesFromAssets();
+
+            // Locate the sibling RichTextLabel in the SubViewport
+            _displayLabel = GetNodeOrNull<RichTextLabel>("../ASCIIDisplay");
+            
+            // Apply centralized typography to ensure terminal-like ASCII mapping
+            if (_displayLabel != null)
+            {
+                FontService.ApplyFont(_displayLabel, FontType.ChatReading);
+            }
+        }
+
+        public override void _Process(double delta)
+        {
+            // Push the current frame to the UI continuously, decoupled from GameManager screen changes
+            if (_displayLabel != null && _frameContents.Count > 0)
+            {
+                _displayLabel.Text = GetCurrentFrameText();
+            }
         }
 
         public bool LoadFramesFromAssets()

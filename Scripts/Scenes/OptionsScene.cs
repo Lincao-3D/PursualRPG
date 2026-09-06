@@ -1,6 +1,5 @@
-// Scripts/Scenes/OptionsScene.cs
 using Godot;
-using PursualRPG.Scripts.Core; // Fixes namespace issue
+using PursualRPG.Scripts.Core;
 
 namespace PursualRPG.Scripts.Scenes
 {
@@ -8,39 +7,36 @@ namespace PursualRPG.Scripts.Scenes
     {
         private HSlider _volumeSlider;
         private CheckBox _muteToggle;
+        private CheckBox _physicalDiceToggle;
+        private Button _worldBuilderButton;
         private Button _backButton;
 
         public override void _Ready()
         {
             _volumeSlider = GetNode<HSlider>("VBoxContainer/VolumeSlider");
             _muteToggle = GetNode<CheckBox>("VBoxContainer/MuteToggle");
+            _physicalDiceToggle = GetNode<CheckBox>("VBoxContainer/PhysicalDiceToggle");
+            _worldBuilderButton = GetNode<Button>("VBoxContainer/WorldBuilderButton");
             _backButton = GetNode<Button>("VBoxContainer/BackButton");
 
-            // Localize static UI elements
             _muteToggle.Text = Tr("BTN_MUTE");
+            _physicalDiceToggle.Text = Tr("BTN_USE_PHYSICAL_DICE");
+            _worldBuilderButton.Text = Tr("BTN_WORLD_BUILDER");
             _backButton.Text = Tr("BTN_BACK");
 
-            _volumeSlider.ValueChanged += OnVolumeChanged;
-            _muteToggle.Toggled += OnMutedToggled;
-            _backButton.Pressed += OnBackPressed;
-            
-            _backButton.MouseEntered += () => SynthAudioServer.Instance.PlayButtonHover();
-        }
+            FontService.ApplyFont(_muteToggle, FontType.DefaultMenu);
+            FontService.ApplyFont(_physicalDiceToggle, FontType.DefaultMenu);
+            _worldBuilderButton.BindAudioAndFont(FontType.SecondaryButton);
+            _backButton.BindAudioAndFont(FontType.SecondaryButton);
 
-        private void OnVolumeChanged(double value)
-        {
-            SynthAudioServer.Instance.SetMasterVolume((float)value);
-        }
+            _physicalDiceToggle.ButtonPressed = GameManager.Instance.UsePhysicalDice;
 
-        private void OnMutedToggled(bool toggledOn)
-        {
-            SynthAudioServer.Instance.SetMuted(toggledOn);
-        }
+            _volumeSlider.ValueChanged += (v) => SynthAudioServer.Instance.SetMasterVolume((float)v);
+            _muteToggle.Toggled += (t) => SynthAudioServer.Instance.SetMuted(t);
+            _physicalDiceToggle.Toggled += (e) => GameManager.Instance.UsePhysicalDice = e;
 
-        private void OnBackPressed()
-        {
-            SynthAudioServer.Instance.PlayButtonClick();
-            GameManager.Instance.ChangeScene("res://Scenes/MainMenuScene.tscn");
+            _worldBuilderButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/ScenarioAssistantScene.tscn");
+            _backButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/MainMenuScene.tscn");
         }
     }
 }

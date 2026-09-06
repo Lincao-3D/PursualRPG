@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="PursualRPG"
-run/main_scene="res://Scenes/SplashScene.tscn"
+run/main_scene="res://Scenes/Main.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.png"
 
@@ -28,3 +28,12 @@ SynthAudioServer="*res://Scripts/Core/SynthAudioServer.cs"
 [dotnet]
 
 project/assembly_name="PursualRPG"
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://Assets/Localization/strings.en_US.translation", "res://Assets/Localization/strings.pt_BR.translation")
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

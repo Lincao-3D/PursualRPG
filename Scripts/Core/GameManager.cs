@@ -1,7 +1,7 @@
 // Scripts/Core/GameManager.cs
 using Godot;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 using Newtonsoft.Json;
 using PursualRPG.Scripts.Domain;
 
@@ -10,8 +10,10 @@ namespace PursualRPG.Scripts.Core
     public partial class GameManager : Node
     {
         public static GameManager Instance { get; private set; }
-        public PlayerData CurrentPlayer { get; set; }
-        public bool UsePhysicalDice { get; set; } = false;
+
+        public Player CurrentPlayer { get; set; }
+
+        public bool UsePhysicalDice { get; set; }
 
         private readonly string SavePath = "user://current_save.json";
 
@@ -21,7 +23,8 @@ namespace PursualRPG.Scripts.Core
             ProcessMode = ProcessModeEnum.Always;
         }
 
-        public bool SaveExists() => File.Exists(ProjectSettings.GlobalizePath(SavePath));
+        public bool SaveExists() =>
+            File.Exists(ProjectSettings.GlobalizePath(SavePath));
 
         public void SaveGame()
         {
@@ -31,23 +34,29 @@ namespace PursualRPG.Scripts.Core
 
         public void LoadGame()
         {
-            if (SaveExists())
-            {
-                var json = File.ReadAllText(ProjectSettings.GlobalizePath(SavePath));
-                CurrentPlayer = JsonConvert.DeserializeObject<PlayerData>(json);
-            }
+            if (!SaveExists())
+                return;
+
+            var json = File.ReadAllText(ProjectSettings.GlobalizePath(SavePath));
+            CurrentPlayer = JsonConvert.DeserializeObject<Player>(json);
         }
 
-        public void ChangeScene(string scenePath) => GetTree().ChangeSceneToFile(scenePath);
-    }
+        public void ChangeScene(string scenePath)
+        {
+            var uiLayer = GetTree().Root.GetNode<CanvasLayer>("Main/UILayer");
 
-    public class PlayerData
-    {
-        public string Name { get; set; }
-        public string Race { get; set; }
-        public string Class { get; set; }
-        public int Gold { get; set; } = 50;
-        public int Xp { get; set; } = 0;
-        public Dictionary<string, int> Attributes { get; set; } = new();
+            foreach (var child in uiLayer.GetChildren())
+                child.QueueFree();
+
+            var packedScene = GD.Load<PackedScene>(scenePath);
+            if (packedScene == null)
+            {
+                GD.PrintErr($"Unable to load scene: {scenePath}");
+                return;
+            }
+
+            var screen = packedScene.Instantiate<Control>();
+            uiLayer.AddChild(screen);
+        }
     }
 }

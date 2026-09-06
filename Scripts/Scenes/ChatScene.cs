@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using PursualRPG.Scripts.Domain;
 using PursualRPG.Scripts.AI;
+using PursualRPG.Scripts.UI;
 using PursualRPG.Scripts.Core;
 
 namespace PursualRPG.Scripts.Scenes
@@ -13,30 +14,82 @@ namespace PursualRPG.Scripts.Scenes
     {
         [Export] public AIMessageBroker MessageBroker;
         [Export] public float TextSpeed = 0.05f;
-        
+
         private RichTextLabel _historyText;
         private LineEdit _userInput;
         private Button _submitButton;
         private Button _combatButton;
-        
+
         private Combat _eminentCombat;
         private Scenario _scenario;
         private bool _savingMode = false;
 
+        private CharacterSheetPanel _characterSheetPanel;
+        private Button _characterSheetButton;
+        private TypewriterLabel _streamPreview;
+
         public override void _Ready()
         {
-            _historyText = GetNode<RichTextLabel>("VBoxContainer/ScrollContainer/HistoryText");
-            _userInput = GetNode<LineEdit>("VBoxContainer/HBoxContainer/UserInput");
-            _submitButton = GetNode<Button>("VBoxContainer/HBoxContainer/SubmitButton");
+            if (MessageBroker == null)
+            {
+                MessageBroker = GetNodeOrNull<AIMessageBroker>("MessageBroker");
+            }
+
+            _historyText = GetNode<RichTextLabel>(
+                "VBoxContainer/ScrollContainer/HistoryText");
+
+            _userInput = GetNode<LineEdit>(
+                "VBoxContainer/HBoxContainer/UserInput");
+
+            _submitButton = GetNode<Button>(
+                "VBoxContainer/HBoxContainer/SubmitButton");
+
             _combatButton = GetNode<Button>("CombatButton");
+
+            _characterSheetPanel = GetNode<CharacterSheetPanel>(
+                "CharacterSheetPanel");
+
+            _characterSheetButton = GetNode<Button>(
+                "CharacterSheetButton");
+
+            _streamPreview = GetNode<TypewriterLabel>(
+                "StreamPreview");
+
+            _submitButton.Text = Tr("BTN_SUBMIT");
+            _combatButton.Text = Tr("BTN_COMBAT");
+            _characterSheetButton.Text = Tr("BTN_CHARACTER_SHEET");
+
+            // Apply Fonts
+            FontService.ApplyFont(_historyText, FontType.ChatReading);
+            FontService.ApplyFont(_userInput, FontType.ChatReading);
+            FontService.ApplyFont(_streamPreview, FontType.ChatReading);
+
+            // Wire Audio and Fonts for buttons
+            _submitButton.BindAudioAndFont(FontType.SecondaryButton);
+            _combatButton.BindAudioAndFont(FontType.SecondaryButton);
+            _characterSheetButton.BindAudioAndFont(FontType.SecondaryButton);
 
             _submitButton.Pressed += OnSubmitPressed;
             _userInput.TextSubmitted += OnTextSubmitted;
             _combatButton.Pressed += OnCombatButtonPressed;
+            _characterSheetButton.Pressed += ToggleCharacterSheet;
+
+            if (MessageBroker != null)
+                MessageBroker.OnTokenStreamed += OnTokenStreamed;
+
             _combatButton.Visible = false;
             _combatButton.Disabled = true;
 
+            _streamPreview.Visible = false;
+
             _scenario = Scenario.DefaultScenario;
+
+            if (MessageBroker != null)
+                MessageBroker.ActiveScenario = _scenario;
+
+            _characterSheetPanel.Initialize(
+                GameManager.Instance.CurrentPlayer);
+
             InitializeChatHistory();
         }
 
@@ -49,7 +102,7 @@ namespace PursualRPG.Scripts.Scenes
         {
             string speakerName = string.IsNullOrEmpty(card.SpeakerKey) ? "DM" : Tr(card.SpeakerKey);
             _historyText.AppendText($"\n[color=yellow]{speakerName}:[/color] ");
-            
+
             foreach (char c in card.Text)
             {
                 _historyText.AppendText(c.ToString());
@@ -58,7 +111,7 @@ namespace PursualRPG.Scripts.Scenes
 
             _userInput.Visible = !card.IsNarrative;
             if (_submitButton != null) _submitButton.Visible = !card.IsNarrative;
-            
+
             if (card.Choices != null && card.Choices.Count > 0)
             {
                 _historyText.AppendText($"\n\n[b]{Tr("TXT_YOUR_OPTIONS")}:[/b]\n");
@@ -89,7 +142,7 @@ namespace PursualRPG.Scripts.Scenes
             if (_savingMode)
             {
                 GameManager.Instance.SaveGame();
-                AppendLog($"\n[System: Game saved as '{text}']\n");
+                AppendLog($"\n[color=gray][System: {string.Format(Tr("MSG_GAME_SAVED"), text)}][/color]\n");
                 _savingMode = false;
                 _userInput.Clear();
                 return;
@@ -103,45 +156,73 @@ namespace PursualRPG.Scripts.Scenes
             }
 
             _userInput.Clear();
-            AppendLog($"\nPlayer:\n{text}\nDM:\n");
+            AppendLog($"\n[color=green]{Tr("TXT_PLAYER")}:[/color]\n{text}\n[color=yellow]{Tr("TXT_DM")}:[/color]\n");
             SendToLLM(text);
         }
 
         private void HandleCommand(string commandText)
         {
-            var parts = commandText[1..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 0) return;
-            string cmd = parts[0].ToLower();
+            var parts = commandText[1..]
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-            if (cmd == "quit" || cmd == "exit")
+            if (parts.Length == 0)
+                return;
+
+            string command = parts[0].ToLowerInvariant();
+
+            if (command == "quit" || command == "exit")
             {
-                GetTree().ChangeSceneToFile("res://Scenes/MainMenuScene.tscn");
+                GameManager.Instance.ChangeScene(
+                    "res://Scenes/MainMenuScene.tscn");
             }
-            else if (cmd == "player" || cmd == "sheet")
+            else if (command == "player" || command == "sheet")
             {
-                AppendLog("\nSystem:\nCharacter Sheet requested. Open panel via UI.\n");
+                ToggleCharacterSheet();
             }
-            else if (cmd == "save")
+            else if (command == "save")
             {
                 _savingMode = true;
-                AppendLog("\nEnter save file name or identifier:\n");
+                AppendLog($"\n{Tr("MSG_ENTER_SAVE_NAME")}\n");
             }
         }
 
-        private async void SendToLLM(string prompt)
+        private void OnTokenStreamed(string token)
         {
-            if (MessageBroker != null)
+            _streamPreview.Visible = true;
+            _streamPreview.Text += token;
+        }
+
+        private void ToggleCharacterSheet()
+        {
+            if (GameManager.Instance.CurrentPlayer == null)
+                return;
+
+            _characterSheetPanel.Initialize(
+                GameManager.Instance.CurrentPlayer);
+
+            _characterSheetPanel.Toggle();
+        }
+
+        private void SendToLLM(string prompt)
+        {
+            if (MessageBroker == null)
+                return;
+
+            _streamPreview.Text = string.Empty;
+            _streamPreview.Visible = true;
+
+            MessageBroker.SendMessageAsync(prompt, response =>
             {
-                MessageBroker.SendMessageAsync(prompt, (response) =>
-                {
-                    CallDeferred(nameof(ReceiveLLMResponse), response);
-                });
-            }
-            else
-            {
-                await Task.Delay(500);
-                ReceiveLLMResponse("The shadows grow longer as you ponder your next move. ```json\n{ \"tool\": \"none\" }\n```");
-            }
+                CallDeferred(nameof(FinishStreamingResponse), response);
+            });
+        }
+
+        private void FinishStreamingResponse(string responseText)
+        {
+            _streamPreview.Visible = false;
+            _streamPreview.Text = string.Empty;
+
+            ReceiveLLMResponse(responseText);
         }
 
         private void ReceiveLLMResponse(string responseText)
@@ -170,7 +251,7 @@ namespace PursualRPG.Scripts.Scenes
             if (command.Name == "initialize_combat")
             {
                 var enemies = new List<Entity> { MonsterFactory.GetFactories()[EnemyEnum.Skeleton] };
-                _eminentCombat = new Combat(this, enemies, fleeable: true);
+                _eminentCombat = new Combat(GameManager.Instance.CurrentPlayer, enemies, fleeable: true);
                 WaitCombatConfirm(_eminentCombat);
             }
             else if (command.Name == "reward_player")
@@ -201,15 +282,18 @@ namespace PursualRPG.Scripts.Scenes
             _submitButton.Visible = false;
             _userInput.Visible = false;
             _combatButton.Visible = false;
-            GetTree().ChangeSceneToFile("res://Scenes/CombatScene.tscn");
+
+            GameManager.Instance.ChangeScene(
+                "res://Scenes/CombatScene.tscn");
         }
 
         private void OnCombatButtonPressed()
         {
-            if (_eminentCombat != null)
-            {
-                GetTree().ChangeSceneToFile("res://Scenes/CombatScene.tscn");
-            }
+            if (_eminentCombat == null)
+                return;
+
+            GameManager.Instance.ChangeScene(
+                "res://Scenes/CombatScene.tscn");
         }
 
         private void AppendLog(string message)

@@ -15,3 +15,23 @@ TITLE_SCENARIO_ASSISTANT,Scenario Assistant,Assistente de Cenário
 LABEL_ENTER_NAME,Enter Name:,Digite o Nome:
 LABEL_SELECT_RACE,Select Race:,Selecione a Raça:
 LABEL_SELECT_CLASS,Select Class:,Selecione a Classe:
+BTN_CREATE,Create, Criar
+BTN_RANDOM,Random, Aleatório
+BTN_USE_PHYSICAL_DICE,Use Physical Dice, Usar Dados Físicos
+DEFAULT_RANDOM_HERO,Random Hero, Herói Aleatório
+RACE_HUMAN,Human, Humano
+RACE_ELF,Elf, Elfo
+RACE_DWARF,Dwarf, Anão
+CLASS_WARRIOR,Warrior, Guerreiro
+CLASS_PALADIN,Paladin, Paladino
+CLASS_ROGUE,Rogue, Ladino
+CLASS_MAGE,Mage, Mago
+CLASS_CLERIC,Cleric, Clérigo
+CLASS_BARD,Bard, Bardo
+CLASS_BARBARIAN,Barbarian, Bárbaro
+BTN_CHARACTER_SHEET,Character Sheet,Ficha de Personagem
+MSG_ENTER_SAVE_NAME,Enter a save name or identifier,Digite um nome ou identificador para o salvamento
+ERR_DOMAIN_DIRECTORY_NOT_FOUND,Domain model directory not found,O diretório do modelo de domínio não foi encontrado
+MSG_DOMAIN_COMPILED,C# domain mechanics compiled successfully,As mecânicas de domínio C# foram compiladas com sucesso
+WARN_ENTER_SCENARIO_CONCEPT,Please enter a scenario concept first,Digite primeiro um conceito de cenário
+MSG_REQUESTING_WORLD_CONFIGURATION,Requesting world configuration for: {0},Solicitando configuração de mundo para: {0}
