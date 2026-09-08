@@ -2,6 +2,10 @@
 # Godot 4+ - Generated Files and Caches
 # ==========================================
 .godot/
+*.import
+*.uid
+
+PursualRPG.csproj.old
 
 # Temporary export credentials file (may contain passwords)
 export_credentials.cfg
