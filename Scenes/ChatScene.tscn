@@ -1,0 +1,105 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Scenes/ChatScene.cs" id="1_chat"]
+[ext_resource type="Script" path="res://Scripts/UI/CharacterSheetPanel.cs" id="2_sheet"]
+[ext_resource type="Script" path="res://Scripts/UI/TypewriterLabel.cs" id="3_stream"]
+[ext_resource type="Script" path="res://Scripts/AI/AIMessageBroker.cs" id="4_broker"]
+[ext_resource type="Script" path="res://Scripts/AI/LLMClient.cs" id="5_llm"]
+
+[node name="ChatScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_chat")
+
+[node name="MessageBroker" type="Node" parent="."]
+script = ExtResource("4_broker")
+
+[node name="LLMClient" type="Node" parent="MessageBroker"]
+script = ExtResource("5_llm")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HistoryText" type="RichTextLabel" parent="VBoxContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+bbcode_enabled = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="UserInput" type="LineEdit" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SubmitButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+
+[node name="CombatButton" type="Button" parent="."]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="CharacterSheetButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 980.0
+offset_top = 16.0
+offset_right = 1136.0
+offset_bottom = 52.0
+
+[node name="StreamPreview" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 520.0
+offset_right = 1128.0
+offset_bottom = 620.0
+bbcode_enabled = true
+script = ExtResource("3_stream")
+
+[node name="CharacterSheetPanel" type="Control" parent="."]
+layout_mode = 0
+offset_left = 742.0
+offset_top = 0.0
+offset_right = 1152.0
+offset_bottom = 648.0
+script = ExtResource("2_sheet")
+
+[node name="NameLabel" type="Label" parent="CharacterSheetPanel"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 380.0
+offset_bottom = 52.0
+
+[node name="StatsLabel" type="Label" parent="CharacterSheetPanel"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 70.0
+offset_right = 380.0
+offset_bottom = 160.0
+
+[node name="AttributesLabel" type="Label" parent="CharacterSheetPanel"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 180.0
+offset_right = 380.0
+offset_bottom = 340.0
+
+[node name="SkillsLabel" type="Label" parent="CharacterSheetPanel"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 350.0
+offset_right = 380.0
+offset_bottom = 500.0

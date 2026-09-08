@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/DiceRollAnimation.cs" id="1_dice"]
+
+[node name="DiceRollAnimation" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_dice")
+
+[node name="DiceTextureRect" type="TextureRect" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+expand_mode = 1
+
+[node name="ResultLabel" type="Label" parent="."]
+layout_mode = 0
+offset_top = 100.0
+offset_right = 200.0
+offset_bottom = 140.0
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)

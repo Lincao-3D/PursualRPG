@@ -1,5 +1,4 @@
 using Godot;
-using PursualRPG.Scripts.Audio;
 using PursualRPG.Scripts.Core;
 
 namespace PursualRPG.Scripts.UI
@@ -7,47 +6,39 @@ namespace PursualRPG.Scripts.UI
     public partial class HorizontalUIBar : Control
     {
         [Export] public float HoldDurationMs { get; set; } = 2000f;
-        [Export] public float Speed { get; set; } = 40f;
-
-        private string _text;
-        private float _screenW;
-        private float _height = 60f;
-        private float _y;
-        private float _x;
-        private string _state = "ENTER";
-        private double _holdStartTime;
-        private int _flashTimer = 0;
-        private bool _playedSound = false;
         public bool IsDone { get; private set; } = false;
 
         private Label _textLabel;
-        private AudioStreamPlayer _audioPlayer;
+        private ColorRect _topBorder;
+        private ColorRect _bottomBorder;
+        private Tween _borderPulseTween;
 
-        public HorizontalUIBar(float screenW, float screenH, string text, float holdDurationMs = 2000f)
+        public void Initialize(string text, float holdDurationMs = 2000f)
         {
-            _screenW = screenW;
-            _text = text;
             HoldDurationMs = holdDurationMs;
-            _height = 60f;
-            _y = (screenH / 2f) - (_height / 2f);
-            _x = screenW;
-        }
+            float screenW = GetViewportRect().Size.X;
+            float height = 60f;
+            float y = (GetViewportRect().Size.Y / 2f) - (height / 2f);
 
-        public override void _Ready()
-        {
-            CustomMinimumSize = new Vector2(_screenW, _height);
-            Position = new Vector2(_x, _y);
+            CustomMinimumSize = new Vector2(screenW, height);
+            Position = new Vector2(screenW, y);
 
             var bg = new ColorRect
             {
-                Color = new Color(0, 0, 0, 0.78f),
-                CustomMinimumSize = new Vector2(_screenW, _height)
+                Color = new Color(0, 0, 0, 0.85f),
+                CustomMinimumSize = new Vector2(screenW, height)
             };
             AddChild(bg);
 
+            _topBorder = new ColorRect { Color = Colors.Gold, CustomMinimumSize = new Vector2(screenW, 4) };
+            AddChild(_topBorder);
+
+            _bottomBorder = new ColorRect { Color = Colors.Gold, CustomMinimumSize = new Vector2(screenW, 4), Position = new Vector2(0, height - 4) };
+            AddChild(_bottomBorder);
+
             _textLabel = new Label
             {
-                Text = _text,
+                Text = text,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -55,50 +46,27 @@ namespace PursualRPG.Scripts.UI
             _textLabel.SetAnchorsPreset(LayoutPreset.FullRect);
             AddChild(_textLabel);
 
-            _audioPlayer = new AudioStreamPlayer();
-            AddChild(_audioPlayer);
+            SynthAudioServer.Instance?.PlayRetroWoosh();
+            _borderPulseTween = TweenManager.PulseModulate(this, Colors.Gold, Colors.White, 0.8f);
+
+            RunCinematicSequence(screenW, y);
         }
 
-        public override void _Process(double delta)
+        private async void RunCinematicSequence(float screenW, float y)
         {
-            if (IsDone) return;
+            var tweenIn = CreateTween();
+            tweenIn.TweenProperty(this, "position", new Vector2(0, y), 0.4f).SetEase(Tween.EaseType.Out);
+            await ToSignal(tweenIn, Tween.SignalName.Finished);
 
-            if (_state == "ENTER")
-            {
-                if (!_playedSound)
-                {
-                    _audioPlayer.Stream = ProceduralAudio.GenerateRetroWoosh();
-                    _audioPlayer.Play();
-                    _playedSound = true;
-                }
+            await ToSignal(GetTree().CreateTimer(HoldDurationMs / 1000f), SceneTreeTimer.SignalName.Timeout);
 
-                _x -= Speed;
-                if (_x <= 0)
-                {
-                    _x = 0;
-                    _state = "HOLD";
-                    _holdStartTime = Time.GetTicksMsec();
-                }
-            }
-            else if (_state == "HOLD")
-            {
-                if (Time.GetTicksMsec() - _holdStartTime > HoldDurationMs)
-                {
-                    _state = "EXIT";
-                }
-            }
-            else if (_state == "EXIT")
-            {
-                _x -= Speed;
-                if (_x < -_screenW)
-                {
-                    IsDone = true;
-                    QueueFree();
-                }
-            }
+            var tweenOut = CreateTween();
+            tweenOut.TweenProperty(this, "position", new Vector2(-screenW, y), 0.4f).SetEase(Tween.EaseType.In);
+            await ToSignal(tweenOut, Tween.SignalName.Finished);
 
-            Position = new Vector2(_x, _y);
-            _flashTimer++;
+            _borderPulseTween?.Kill();
+            IsDone = true;
+            QueueFree();
         }
     }
 }

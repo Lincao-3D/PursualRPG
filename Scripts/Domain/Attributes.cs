@@ -36,6 +36,32 @@ namespace PursualRPG.Scripts.Domain
             };
         }
 
+        public static List<int> RollFourD6DropLowestSet()
+        {
+            var rand = new Random();
+            List<int> rolls;
+            do
+            {
+                rolls = new List<int>();
+                for (int i = 0; i < 6; i++)
+                {
+                    var dices = new int[4];
+                    for (int d = 0; d < 4; d++) dices[d] = rand.Next(1, 7);
+                    Array.Sort(dices);
+                    Array.Reverse(dices);
+                    rolls.Add(dices[0] + dices[1] + dices[2]);
+                }
+            } while (HasDuplicates(rolls));
+            rolls.Sort((a, b) => b.CompareTo(a));
+            return rolls;
+        }
+
+        private static bool HasDuplicates(List<int> list)
+        {
+            var set = new HashSet<int>(list);
+            return set.Count < list.Count;
+        }
+
         public static List<int> RollAttribs(int count = 6)
         {
             var rand = new Random();

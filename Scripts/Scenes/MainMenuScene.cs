@@ -28,6 +28,9 @@ namespace PursualRPG.Scripts.Scenes
 			_optionsButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/OptionsScene.tscn");
 
 			_continueButton.Visible = GameManager.Instance.SaveExists();
+
+            // Trigger dungeon synth music theme with vocal stab
+            SynthAudioServer.Instance?.PlayDungeonSynthTheme();
 		}
 	}
 }

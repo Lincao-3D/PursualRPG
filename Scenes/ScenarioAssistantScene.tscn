@@ -1,0 +1,53 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Scenes/ScenarioAssistantScene.cs" id="1_assistant"]
+
+[node name="ScenarioAssistantScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_assistant")
+
+[node name="WorldInput" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 500.0
+offset_bottom = 200.0
+placeholder_text = "Enter chronicle concept..."
+
+[node name="OutputView" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 220.0
+offset_right = 500.0
+offset_bottom = 400.0
+editable = false
+
+[node name="BtnCompile" type="Button" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 420.0
+offset_right = 150.0
+offset_bottom = 460.0
+text = "Compile"
+
+[node name="BtnGenerate" type="Button" parent="."]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 420.0
+offset_right = 300.0
+offset_bottom = 460.0
+text = "Generate"
+
+[node name="BtnBack" type="Button" parent="."]
+layout_mode = 0
+offset_left = 320.0
+offset_top = 420.0
+offset_right = 450.0
+offset_bottom = 460.0
+text = "Back"
+

@@ -1,0 +1,56 @@
+[gd_scene format=3 uid="uid://dfmj11brq43e8"]
+
+[ext_resource type="Script" uid="uid://ccp73hxep5xr6" path="res://Scripts/Scenes/CharacterCreatorScene.cs" id="1_creator"]
+
+[node name="CharacterCreatorScene" type="Control" unique_id=2126411667]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_creator")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1167449392]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -220.0
+offset_right = 180.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="VBoxContainer" unique_id=1830431542]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="VBoxContainer" unique_id=2080444216]
+layout_mode = 2
+
+[node name="NameInput" type="LineEdit" parent="VBoxContainer" unique_id=1711884571]
+layout_mode = 2
+
+[node name="RaceLabel" type="Label" parent="VBoxContainer" unique_id=1477061799]
+layout_mode = 2
+
+[node name="RaceSelect" type="OptionButton" parent="VBoxContainer" unique_id=418158197]
+layout_mode = 2
+
+[node name="ClassLabel" type="Label" parent="VBoxContainer" unique_id=1039347257]
+layout_mode = 2
+
+[node name="ClassSelect" type="OptionButton" parent="VBoxContainer" unique_id=282913671]
+layout_mode = 2
+
+[node name="CreateButton" type="Button" parent="VBoxContainer" unique_id=651272469]
+layout_mode = 2
+
+[node name="RandomButton" type="Button" parent="VBoxContainer" unique_id=1936081248]
+layout_mode = 2
+
+[node name="MenuButton" type="Button" parent="VBoxContainer" unique_id=173083911]
+layout_mode = 2

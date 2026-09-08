@@ -1,5 +1,5 @@
-// Scripts/Core/SynthAudioServer.cs
 using Godot;
+using PursualRPG.Scripts.Audio;
 
 namespace PursualRPG.Scripts.Core
 {
@@ -11,6 +11,10 @@ namespace PursualRPG.Scripts.Core
 
         private AudioStreamPlayer _sfxPlayer;
         private AudioStreamPlayer _musicPlayer;
+
+        private AudioStreamWav _retroWooshCache;
+        private AudioStreamWav _femaleOhhCache;
+        private AudioStreamWav _dungeonSynthCache;
 
         public override void _Ready()
         {
@@ -34,6 +38,28 @@ namespace PursualRPG.Scripts.Core
         {
             var stream = GD.Load<AudioStream>("res://Assets/Sfx/button_hover.mp3");
             if (stream != null) { _sfxPlayer.Stream = stream; _sfxPlayer.Play(); }
+        }
+
+        public void PlayRetroWoosh()
+        {
+            _retroWooshCache ??= ProceduralAudio.GenerateRetroWoosh();
+            _sfxPlayer.Stream = _retroWooshCache;
+            _sfxPlayer.Play();
+        }
+
+        public void PlayFemaleOhhStab()
+        {
+            _femaleOhhCache ??= ProceduralAudio.GenerateFemaleOhhStab();
+            _sfxPlayer.Stream = _femaleOhhCache;
+            _sfxPlayer.Play();
+        }
+
+        public void PlayDungeonSynthTheme()
+        {
+            if (_musicPlayer.Playing && _musicPlayer.Stream != null) return;
+            _dungeonSynthCache ??= ProceduralAudio.GenerateDungeonSynthTheme();
+            _musicPlayer.Stream = _dungeonSynthCache;
+            _musicPlayer.Play();
         }
 
         public void SetMasterVolume(float volumeLinear)
