@@ -30,41 +30,24 @@ namespace PursualRPG.Scripts.Scenes
 
         public override void _Ready()
         {
-            if (MessageBroker == null)
-            {
-                MessageBroker = GetNodeOrNull<AIMessageBroker>("MessageBroker");
-            }
+            if (MessageBroker == null) MessageBroker = GetNodeOrNull<AIMessageBroker>("MessageBroker");
 
-            _historyText = GetNode<RichTextLabel>(
-                "VBoxContainer/ScrollContainer/HistoryText");
-
-            _userInput = GetNode<LineEdit>(
-                "VBoxContainer/HBoxContainer/UserInput");
-
-            _submitButton = GetNode<Button>(
-                "VBoxContainer/HBoxContainer/SubmitButton");
-
+            _historyText = GetNode<RichTextLabel>("VBoxContainer/ScrollContainer/HistoryText");
+            _userInput = GetNode<LineEdit>("VBoxContainer/HBoxContainer/UserInput");
+            _submitButton = GetNode<Button>("VBoxContainer/HBoxContainer/SubmitButton");
             _combatButton = GetNode<Button>("CombatButton");
-
-            _characterSheetPanel = GetNode<CharacterSheetPanel>(
-                "CharacterSheetPanel");
-
-            _characterSheetButton = GetNode<Button>(
-                "CharacterSheetButton");
-
-            _streamPreview = GetNode<TypewriterLabel>(
-                "StreamPreview");
+            _characterSheetPanel = GetNode<CharacterSheetPanel>("CharacterSheetPanel");
+            _characterSheetButton = GetNode<Button>("CharacterSheetButton");
+            _streamPreview = GetNode<TypewriterLabel>("StreamPreview");
 
             _submitButton.Text = Tr("BTN_SUBMIT");
-            _combatButton.Text = Tr("BTN_COMBAT");
+            _combatButton.Text = "ENTER COMBAT";
             _characterSheetButton.Text = Tr("BTN_CHARACTER_SHEET");
 
-            // Apply Fonts
             FontService.ApplyFont(_historyText, FontType.ChatReading);
             FontService.ApplyFont(_userInput, FontType.ChatReading);
             FontService.ApplyFont(_streamPreview, FontType.ChatReading);
 
-            // Wire Audio and Fonts for buttons
             _submitButton.BindAudioAndFont(FontType.SecondaryButton);
             _combatButton.BindAudioAndFont(FontType.SecondaryButton);
             _characterSheetButton.BindAudioAndFont(FontType.SecondaryButton);
@@ -74,22 +57,16 @@ namespace PursualRPG.Scripts.Scenes
             _combatButton.Pressed += OnCombatButtonPressed;
             _characterSheetButton.Pressed += ToggleCharacterSheet;
 
-            if (MessageBroker != null)
-                MessageBroker.OnTokenStreamed += OnTokenStreamed;
+            if (MessageBroker != null) MessageBroker.OnTokenStreamed += OnTokenStreamed;
 
             _combatButton.Visible = false;
             _combatButton.Disabled = true;
-
             _streamPreview.Visible = false;
 
             _scenario = Scenario.DefaultScenario;
+            if (MessageBroker != null) MessageBroker.ActiveScenario = _scenario;
 
-            if (MessageBroker != null)
-                MessageBroker.ActiveScenario = _scenario;
-
-            _characterSheetPanel.Initialize(
-                GameManager.Instance.CurrentPlayer);
-
+            _characterSheetPanel.Initialize(GameManager.Instance.CurrentPlayer);
             InitializeChatHistory();
         }
 
@@ -124,15 +101,8 @@ namespace PursualRPG.Scripts.Scenes
             }
         }
 
-        private void OnSubmitPressed()
-        {
-            ProcessInput(_userInput.Text);
-        }
-
-        private void OnTextSubmitted(string text)
-        {
-            ProcessInput(text);
-        }
+        private void OnSubmitPressed() => ProcessInput(_userInput.Text);
+        private void OnTextSubmitted(string text) => ProcessInput(text);
 
         private void ProcessInput(string text)
         {
@@ -162,18 +132,13 @@ namespace PursualRPG.Scripts.Scenes
 
         private void HandleCommand(string commandText)
         {
-            var parts = commandText[1..]
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-            if (parts.Length == 0)
-                return;
+            var parts = commandText[1..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return;
 
             string command = parts[0].ToLowerInvariant();
-
             if (command == "quit" || command == "exit")
             {
-                GameManager.Instance.ChangeScene(
-                    "res://Scenes/MainMenuScene.tscn");
+                GameManager.Instance.ChangeScene("res://Scenes/MainMenuScene.tscn");
             }
             else if (command == "player" || command == "sheet")
             {
@@ -194,25 +159,18 @@ namespace PursualRPG.Scripts.Scenes
 
         private void ToggleCharacterSheet()
         {
-            if (GameManager.Instance.CurrentPlayer == null)
-                return;
-
-            _characterSheetPanel.Initialize(
-                GameManager.Instance.CurrentPlayer);
-
+            if (GameManager.Instance.CurrentPlayer == null) return;
+            _characterSheetPanel.Initialize(GameManager.Instance.CurrentPlayer);
             _characterSheetPanel.Toggle();
         }
 
         private void SendToLLM(string prompt)
         {
-            if (MessageBroker == null)
-                return;
-
+            if (MessageBroker == null) return;
             _streamPreview.Text = string.Empty;
             _streamPreview.Visible = true;
 
-            MessageBroker.SendMessageAsync(prompt, response =>
-            {
+            MessageBroker.SendMessageAsync(prompt, response => {
                 CallDeferred(nameof(FinishStreamingResponse), response);
             });
         }
@@ -221,7 +179,6 @@ namespace PursualRPG.Scripts.Scenes
         {
             _streamPreview.Visible = false;
             _streamPreview.Text = string.Empty;
-
             ReceiveLLMResponse(responseText);
         }
 
@@ -259,46 +216,49 @@ namespace PursualRPG.Scripts.Scenes
                 int gold = 10;
                 int xp = 50;
 
-                if (command.Arguments.TryGetValue("gold", out var goldElem))
-                {
-                    if (goldElem.ValueKind == JsonValueKind.Number) gold = goldElem.GetInt32();
-                }
-                if (command.Arguments.TryGetValue("xp", out var xpElem))
-                {
-                    if (xpElem.ValueKind == JsonValueKind.Number) xp = xpElem.GetInt32();
-                }
+                if (command.Arguments.TryGetValue("gold", out var goldElem) && goldElem.ValueKind == JsonValueKind.Number) gold = goldElem.GetInt32();
+                if (command.Arguments.TryGetValue("xp", out var xpElem) && xpElem.ValueKind == JsonValueKind.Number) xp = xpElem.GetInt32();
 
-                if (GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
+                if (GameManager.Instance?.CurrentPlayer != null)
                 {
                     GameManager.Instance.CurrentPlayer.Gold += gold;
                     GameManager.Instance.CurrentPlayer.Xp += xp;
                 }
-                AppendLog($"\n[System: Rewarded +{gold} Gold, +{xp} XP]\n");
+                AppendLog($"\n[color=gold][System: Rewarded +{gold} Gold, +{xp} XP][/color]\n");
+            }
+            else if (command.Name == "give_item" || command.Name == "give_items")
+            {
+                int itemId = 1;
+                int qty = 1;
+
+                if (command.Arguments.TryGetValue("item_id", out var idElem) && idElem.ValueKind == JsonValueKind.Number) itemId = idElem.GetInt32();
+                if (command.Arguments.TryGetValue("quantity", out var qtyElem) && qtyElem.ValueKind == JsonValueKind.Number) qty = qtyElem.GetInt32();
+
+                if (GameManager.Instance?.CurrentPlayer != null)
+                {
+                    GameManager.Instance.CurrentPlayer.GiveItem(itemId, qty);
+                    var itemInfo = ItemFactoryRegistry.GetItem(itemId);
+                    AppendLog($"\n[color=cyan][System: Received {itemInfo.Name} x{qty}][/color]\n");
+                }
             }
         }
 
         public void WaitCombatConfirm(Combat combat)
         {
-            _submitButton.Visible = false;
-            _userInput.Visible = false;
-            _combatButton.Visible = false;
-
-            GameManager.Instance.ChangeScene(
-                "res://Scenes/CombatScene.tscn");
+            _combatButton.Visible = true;
+            _combatButton.Disabled = false;
+            AppendLog("\n[color=red][System: An encounter has begun! Click 'ENTER COMBAT' to engage!][/color]\n");
         }
 
         private void OnCombatButtonPressed()
         {
-            if (_eminentCombat == null)
-                return;
-
-            GameManager.Instance.ChangeScene(
-                "res://Scenes/CombatScene.tscn");
+            if (_eminentCombat == null) return;
+            GameManager.Instance.ChangeScene("res://Scenes/CombatScene.tscn");
         }
 
         private void AppendLog(string message)
         {
-            _historyText.Text += message;
+            _historyText.AppendText(message);
         }
     }
 }

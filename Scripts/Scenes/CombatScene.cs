@@ -21,8 +21,11 @@ namespace PursualRPG.Scripts.Scenes
         private Button _skillButton;
         private Button _itemButton;
         private Button _fleeButton;
+        
         private Control _skillPanel;
         private VBoxContainer _skillList;
+        private Control _itemPanel;
+        private VBoxContainer _itemList;
 
         public override void _Ready()
         {
@@ -34,6 +37,8 @@ namespace PursualRPG.Scripts.Scenes
             _fleeButton = GetNode<Button>("UI/ActionButtons/FleeButton");
             _skillPanel = GetNodeOrNull<Control>("UI/SkillPanel");
             _skillList = GetNodeOrNull<VBoxContainer>("UI/SkillPanel/ScrollContainer/VBoxContainer");
+
+            SetupItemPanel();
 
             _attackButton.Text = Tr("BTN_ATTACK");
             _skillButton.Text = Tr("BTN_SKILL");
@@ -48,9 +53,24 @@ namespace PursualRPG.Scripts.Scenes
 
             _attackButton.Pressed += () => _ = OnAttackPressedAsync();
             _skillButton.Pressed += OnSkillMenuToggled;
+            _itemButton.Pressed += OnItemMenuToggled;
             _fleeButton.Pressed += () => _ = OnFleePressedAsync();
 
             if (_skillPanel != null) _skillPanel.Visible = false;
+        }
+
+        private void SetupItemPanel()
+        {
+            var uiNode = GetNode<Control>("UI");
+            _itemPanel = new PanelContainer { Visible = false, CustomMinimumSize = new Vector2(220, 180) };
+            _itemPanel.SetAnchorsPreset(LayoutPreset.CenterLeft);
+            _itemPanel.Position = new Vector2(20, 200);
+
+            var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(200, 160) };
+            _itemList = new VBoxContainer();
+            scroll.AddChild(_itemList);
+            _itemPanel.AddChild(scroll);
+            uiNode.AddChild(_itemPanel);
         }
 
         public async void Initialize(Combat combat)
@@ -61,6 +81,7 @@ namespace PursualRPG.Scripts.Scenes
             _fleeButton.Disabled = !_combat.Fleeable;
 
             PopulateSkills();
+            PopulateItems();
             await RollInitiativeAsync();
             ProcessTurnQueue();
         }
@@ -148,14 +169,11 @@ namespace PursualRPG.Scripts.Scenes
             else
             {
                 int roll = GD.RandRange(1, 20);
-                var animPrefab = GD.Load<PackedScene>("res://Scenes/DiceRollAnimation.tscn");
-                if (animPrefab != null)
-                {
-                    var anim = animPrefab.Instantiate<DiceRollAnimation>();
-                    AddChild(anim);
-                    anim.SetResult(roll.ToString());
-                    anim.HideAfter3Seconds();
-                }
+                var anim = new DiceRollAnimation();
+                AddChild(anim);
+                anim.SetResult(roll.ToString());
+                anim.HideAfter3Seconds();
+
                 await ToSignal(GetTree().CreateTimer(1.5f), SceneTreeTimer.SignalName.Timeout);
                 return roll;
             }
@@ -166,20 +184,76 @@ namespace PursualRPG.Scripts.Scenes
             if (_skillList == null) return;
             foreach (Node child in _skillList.GetChildren()) child.QueueFree();
 
-            var classSkills = SkillFactoryRegistry.SkillFactory.Values.Where(s => s.Classes.Contains(_combat.PlayerRef.Clazz.Name == "Warrior" ? CharacterClassEnum.Warrior : CharacterClassEnum.Paladin));
-
             foreach (var skill in SkillFactoryRegistry.SkillFactory.Values)
             {
-                var btn = new Button { Text = Tr($"SKILL_{skill.Enum.ToString().ToUpper()}") };
+                var btn = new Button { Text = skill.Name };
                 btn.BindAudioAndFont(FontType.SecondaryButton);
                 btn.Pressed += () => _ = OnSkillExecuteAsync(skill);
                 _skillList.AddChild(btn);
             }
         }
 
+        private void PopulateItems()
+        {
+            if (_itemList == null || _combat?.PlayerRef == null) return;
+            foreach (Node child in _itemList.GetChildren()) child.QueueFree();
+
+            var inv = _combat.PlayerRef.Inventory;
+            if (inv.Count == 0)
+            {
+                _itemList.AddChild(new Label { Text = "No items available" });
+                return;
+            }
+
+            foreach (var kvp in inv)
+            {
+                if (kvp.Value <= 0) continue;
+                var itemObj = ItemFactoryRegistry.GetItem(kvp.Key);
+                var btn = new Button { Text = $"{itemObj.Name} (x{kvp.Value})" };
+                btn.Disabled = !itemObj.IsUsable;
+                btn.BindAudioAndFont(FontType.SecondaryButton);
+                
+                int itemId = kvp.Key;
+                btn.Pressed += () => OnItemUsePressed(itemId);
+                _itemList.AddChild(btn);
+            }
+        }
+
         private void OnSkillMenuToggled()
         {
-            if (_skillPanel != null) _skillPanel.Visible = !_skillPanel.Visible;
+            if (_skillPanel != null)
+            {
+                _skillPanel.Visible = !_skillPanel.Visible;
+                if (_itemPanel != null) _itemPanel.Visible = false;
+            }
+        }
+
+        private void OnItemMenuToggled()
+        {
+            if (_itemPanel != null)
+            {
+                _itemPanel.Visible = !_itemPanel.Visible;
+                if (_skillPanel != null) _skillPanel.Visible = false;
+                PopulateItems();
+            }
+        }
+
+        private void OnItemUsePressed(int itemId)
+        {
+            if (!_combat.IsPlayerTurn || _isProcessingTurn) return;
+            _isProcessingTurn = true;
+            SetButtonsEnabled(false);
+            if (_itemPanel != null) _itemPanel.Visible = false;
+
+            var player = _combat.PlayerRef;
+            if (player.Inventory.TryGetValue(itemId, out int qty) && qty > 0)
+            {
+                player.Inventory[itemId]--;
+                var item = ItemFactoryRegistry.GetItem(itemId);
+                item.Use(player, _currentTarget, _combat);
+            }
+
+            CompletePlayerAction();
         }
 
         private async Task OnAttackPressedAsync()

@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections.Generic;
+using PursualRPG.Scripts.Core;
 
 namespace PursualRPG.Scripts.UI
 {
@@ -11,10 +12,10 @@ namespace PursualRPG.Scripts.UI
         private bool _isRolling = true;
         private bool _isVisible = true;
 
-        [Export] public Label ResultLabel;
-        [Export] public TextureRect DiceTextureRect;
+        public Label ResultLabel { get; private set; }
+        public TextureRect DiceTextureRect { get; private set; }
 
-        private List<(Texture2D texture, int delay)> _frames = new();
+        private readonly List<(Texture2D texture, int delay)> _frames = new();
         private int _currentFrameIdx = 0;
         private double _lastFrameUpdate;
 
@@ -34,17 +35,24 @@ namespace PursualRPG.Scripts.UI
             _spawnTime = _startTime;
             _lastFrameUpdate = _startTime;
 
+            SetAnchorsPreset(LayoutPreset.Center);
+
             if (DiceTextureRect == null)
             {
-                DiceTextureRect = new TextureRect();
+                DiceTextureRect = new TextureRect
+                {
+                    CustomMinimumSize = new Vector2(80, 80),
+                    ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize
+                };
                 AddChild(DiceTextureRect);
             }
 
             if (ResultLabel == null)
             {
                 ResultLabel = new Label();
+                FontService.ApplyFont(ResultLabel, FontType.SecondaryButton, 28);
+                ResultLabel.Position = new Vector2(0, 90);
                 AddChild(ResultLabel);
-                FontService.ApplyFont(ResultLabel, FontType.SecondaryButton, 32);
             }
 
             LoadFrames();
@@ -63,8 +71,7 @@ namespace PursualRPG.Scripts.UI
                 }
                 else
                 {
-                    var fallback = new PlaceholderTexture2D();
-                    fallback.Size = new Vector2I(50, 50);
+                    var fallback = new PlaceholderTexture2D { Size = new Vector2I(80, 80) };
                     _frames.Add((fallback, delay));
                 }
             }
@@ -74,7 +81,7 @@ namespace PursualRPG.Scripts.UI
         {
             if (ResultLabel != null)
             {
-                ResultLabel.Text = $"Roll result: {resultString}";
+                ResultLabel.Text = $"Roll: {resultString}";
                 ResultLabel.Visible = true;
             }
         }
