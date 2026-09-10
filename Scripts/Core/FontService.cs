@@ -26,20 +26,31 @@ namespace PursualRPG.Scripts.Core
             _isInitialized = true;
         }
 
-        public static void ApplyFont(Control node, FontType type, int sizeOverride = 0)
+        public static void ApplyFont(Node node, FontType type, int sizeOverride = 0)
         {
             Initialize();
             if (!_fontCache.TryGetValue(type, out var font) || font == null) return;
 
-            node.AddThemeFontOverride("font", font);
-            node.AddThemeFontOverride("normal_font", font);
-            node.AddThemeFontOverride("bold_font", font);
-
-            if (sizeOverride > 0)
+            if (node is Control control)
             {
-                node.AddThemeFontSizeOverride("font_size", sizeOverride);
-                node.AddThemeFontSizeOverride("normal_font_size", sizeOverride);
-                node.AddThemeFontSizeOverride("bold_font_size", sizeOverride);
+                control.AddThemeFontOverride("font", font);
+                control.AddThemeFontOverride("normal_font", font);
+                control.AddThemeFontOverride("bold_font", font);
+
+                if (sizeOverride > 0)
+                {
+                    control.AddThemeFontSizeOverride("font_size", sizeOverride);
+                    control.AddThemeFontSizeOverride("normal_font_size", sizeOverride);
+                    control.AddThemeFontSizeOverride("bold_font_size", sizeOverride);
+                }
+            }
+            else if (node is Window window)
+            {
+                window.AddThemeFontOverride("font", font);
+                if (sizeOverride > 0)
+                {
+                    window.AddThemeFontSizeOverride("font_size", sizeOverride);
+                }
             }
         }
     }

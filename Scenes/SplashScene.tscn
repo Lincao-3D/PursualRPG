@@ -15,19 +15,22 @@ script = ExtResource("1_splash")
 [node name="BackgroundLayer" type="CanvasLayer" parent="."]
 layer = -1
 
-[node name="SubViewportContainer" type="SubViewportContainer" parent="BackgroundLayer"]
+[node name="AspectRatioContainer" type="AspectRatioContainer" parent="BackgroundLayer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+ratio = 1.7777
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="BackgroundLayer/AspectRatioContainer"]
+layout_mode = 2
 stretch = true
 
-[node name="SubViewport" type="SubViewport" parent="BackgroundLayer/SubViewportContainer"]
+[node name="SubViewport" type="SubViewport" parent="BackgroundLayer/AspectRatioContainer/SubViewportContainer"]
 size = Vector2i(1152, 648)
-render_target_update_mode = 4
 
-[node name="BgColor" type="ColorRect" parent="BackgroundLayer/SubViewportContainer/SubViewport"]
+[node name="BgColor" type="ColorRect" parent="BackgroundLayer/AspectRatioContainer/SubViewportContainer/SubViewport"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -35,7 +38,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.05, 0.05, 0.08, 1)
 
-[node name="ASCIIDisplay" type="RichTextLabel" parent="BackgroundLayer/SubViewportContainer/SubViewport"]
+[node name="ASCIIDisplay" type="RichTextLabel" parent="BackgroundLayer/AspectRatioContainer/SubViewportContainer/SubViewport"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -45,7 +48,7 @@ theme_override_font_sizes/normal_font_size = 14
 theme_override_colors/default_color = Color(0.2, 0.8, 0.2, 0.6)
 autowrap_mode = 0
 
-[node name="ASCIIBgPlayer" type="Node" parent="BackgroundLayer/SubViewportContainer/SubViewport"]
+[node name="ASCIIBgPlayer" type="Node" parent="BackgroundLayer/AspectRatioContainer/SubViewportContainer/SubViewport"]
 script = ExtResource("2_ascii")
 
 [node name="OccludingMask" type="ColorRect" parent="BackgroundLayer"]

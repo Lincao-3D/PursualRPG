@@ -38,7 +38,12 @@ namespace PursualRPG.Scripts.Scenes
             _skillPanel = GetNodeOrNull<Control>("UI/SkillPanel");
             _skillList = GetNodeOrNull<VBoxContainer>("UI/SkillPanel/ScrollContainer/VBoxContainer");
 
+            if (_skillPanel == null || _skillList == null)
+            {
+                SetupSkillPanel();
+            }
             SetupItemPanel();
+            
 
             _attackButton.Text = Tr("BTN_ATTACK");
             _skillButton.Text = Tr("BTN_SKILL");
@@ -71,6 +76,20 @@ namespace PursualRPG.Scripts.Scenes
             scroll.AddChild(_itemList);
             _itemPanel.AddChild(scroll);
             uiNode.AddChild(_itemPanel);
+        }
+
+        private void SetupSkillPanel()
+        {
+            var uiNode = GetNode<Control>("UI");
+            _skillPanel = new PanelContainer { Visible = false, CustomMinimumSize = new Vector2(220, 180) };
+            _skillPanel.SetAnchorsPreset(LayoutPreset.CenterLeft);
+            _skillPanel.Position = new Vector2(20, 200);
+
+            var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(200, 160) };
+            _skillList = new VBoxContainer();
+            scroll.AddChild(_skillList);
+            _skillPanel.AddChild(scroll);
+            uiNode.AddChild(_skillPanel);
         }
 
         public async void Initialize(Combat combat)

@@ -30,22 +30,40 @@ namespace PursualRPG.Scripts.Scenes
         [Export] public Button RerollButton;
         [Export] public Button CreateButton;
         [Export] public Button RandomButton;
-        [Export] public ItemList SkillList;
-        [Export] public ItemList ExpertiseList;
+        [Export] public GridContainer SkillGrid;
+        [Export] public GridContainer ExpertiseGrid;
+        [Export] public Button MenuButton;
 
+        private List<CheckBox> _skillCheckboxes = new();
+        private List<CheckBox> _expertiseCheckboxes = new();
+
+        private void SyncNodeReferences()
+        {
+            // Fallback node retrieval using existing public properties
+            ChecklistLabel ??= GetNodeOrNull<RichTextLabel>("%ChecklistLabel") ?? GetNodeOrNull<RichTextLabel>("ScrollContainer/MarginContainer/VBoxContainer/ChecklistLabel") ?? GetNodeOrNull<RichTextLabel>("ScrollContainer/VBoxContainer/ChecklistLabel");
+            ExpertiseGrid ??= GetNodeOrNull<GridContainer>("%ExpertiseGrid") ?? GetNodeOrNull<GridContainer>("ScrollContainer/MarginContainer/VBoxContainer/ExpertiseGrid") ?? GetNodeOrNull<GridContainer>("ScrollContainer/VBoxContainer/ExpertiseGrid");
+            SkillGrid ??= GetNodeOrNull<GridContainer>("%SkillGrid") ?? GetNodeOrNull<GridContainer>("ScrollContainer/MarginContainer/VBoxContainer/SkillGrid") ?? GetNodeOrNull<GridContainer>("ScrollContainer/VBoxContainer/SkillGrid");
+            CreateButton ??= GetNodeOrNull<Button>("%CreateButton") ?? GetNodeOrNull<Button>("ActionFooter/CreateButton") ?? GetNodeOrNull<Button>("ScrollContainer/MarginContainer/VBoxContainer/CreateButton") ?? GetNodeOrNull<Button>("ScrollContainer/VBoxContainer/CreateButton");
+        }
         public override async void _Ready()
         {
-            NameInput = GetNodeOrNull<LineEdit>("VBoxContainer/NameInput");
-            RaceSelect = GetNodeOrNull<OptionButton>("VBoxContainer/RaceSelect");
-            ClassSelect = GetNodeOrNull<OptionButton>("VBoxContainer/ClassSelect");
-            AttributeAssignmentContainer = GetNodeOrNull<VBoxContainer>("VBoxContainer/AttributeAssignmentContainer");
-            ChecklistLabel = GetNodeOrNull<RichTextLabel>("VBoxContainer/ChecklistLabel");
-            ErrorLabel = GetNodeOrNull<Label>("VBoxContainer/ErrorLabel");
-            RerollButton = GetNodeOrNull<Button>("VBoxContainer/RerollButton");
-            CreateButton = GetNodeOrNull<Button>("VBoxContainer/CreateButton");
-            RandomButton = GetNodeOrNull<Button>("VBoxContainer/RandomButton");
-            SkillList = GetNodeOrNull<ItemList>("VBoxContainer/SkillList");
-            ExpertiseList = GetNodeOrNull<ItemList>("VBoxContainer/ExpertiseList");
+            base._Ready();
+            SyncNodeReferences();
+            NameInput = GetNodeOrNull<LineEdit>("ScrollContainer/MarginContainer/VBoxContainer/NameInput") ?? GetNodeOrNull<LineEdit>("ScrollContainer/VBoxContainer/NameInput");
+            RaceSelect = GetNodeOrNull<OptionButton>("ScrollContainer/MarginContainer/VBoxContainer/RaceSelect") ?? GetNodeOrNull<OptionButton>("ScrollContainer/VBoxContainer/RaceSelect");
+            ClassSelect = GetNodeOrNull<OptionButton>("ScrollContainer/MarginContainer/VBoxContainer/ClassSelect") ?? GetNodeOrNull<OptionButton>("ScrollContainer/VBoxContainer/ClassSelect");
+            AttributeAssignmentContainer = GetNodeOrNull<VBoxContainer>("ScrollContainer/MarginContainer/VBoxContainer/AttributeAssignmentContainer") ?? GetNodeOrNull<VBoxContainer>("ScrollContainer/VBoxContainer/AttributeAssignmentContainer");
+            ChecklistLabel = GetNodeOrNull<RichTextLabel>("ScrollContainer/MarginContainer/VBoxContainer/ChecklistLabel") ?? GetNodeOrNull<RichTextLabel>("ScrollContainer/VBoxContainer/ChecklistLabel");
+            ErrorLabel = GetNodeOrNull<Label>("ScrollContainer/MarginContainer/VBoxContainer/ErrorLabel") ?? GetNodeOrNull<Label>("ScrollContainer/VBoxContainer/ErrorLabel");
+            RerollButton = GetNodeOrNull<Button>("ScrollContainer/MarginContainer/VBoxContainer/RerollButton") ?? GetNodeOrNull<Button>("ScrollContainer/VBoxContainer/RerollButton");
+            SkillGrid = GetNodeOrNull<GridContainer>("ScrollContainer/MarginContainer/VBoxContainer/SkillGrid") ?? GetNodeOrNull<GridContainer>("ScrollContainer/VBoxContainer/SkillGrid");
+            ExpertiseGrid = GetNodeOrNull<GridContainer>("ScrollContainer/MarginContainer/VBoxContainer/ExpertiseGrid") ?? GetNodeOrNull<GridContainer>("ScrollContainer/VBoxContainer/ExpertiseGrid");
+
+            // CharacterCreatorScene.cs (Button Wiring)
+            CreateButton?.BindAudioAndFont(FontType.SecondaryButton);
+            RandomButton?.BindAudioAndFont(FontType.SecondaryButton);
+            RerollButton?.BindAudioAndFont(FontType.SecondaryButton);
+            MenuButton?.BindAudioAndFont(FontType.SecondaryButton);
 
             if (ErrorLabel != null)
             {
@@ -54,24 +72,135 @@ namespace PursualRPG.Scripts.Scenes
             }
 
             SetupSelectors();
-            
+            ApplyFontsToAllUIControls(this);
             await RunCinematicIntroAsync();
 
             InitializeRolls();
             UpdateChecklist();
 
             if (CreateButton != null) CreateButton.Pressed += OnCreatePressed;
-            if (RandomButton != null) RandomButton.Pressed += OnRandomPressed;
+            if (RandomButton != null) RandomButton.Pressed += () => _ = OnRandomPressedAsync();
             if (RerollButton != null) RerollButton.Pressed += OnRerollPressed;
             if (NameInput != null) NameInput.TextChanged += text => _selectedName = text;
-        }
 
+            if (MenuButton != null)
+            {
+                MenuButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/MainMenuScene.tscn");
+            }
+        }
+        
+        private void ApplyFontsToAllUIControls(Control parent)
+        {
+            foreach (Node child in parent.GetChildren())
+            {
+                if (child is Label label)
+                {
+                    FontService.ApplyFont(label, FontType.DefaultMenu);
+                }
+                else if (child is OptionButton optionButton)
+                {
+                    FontService.ApplyFont(optionButton, FontType.DefaultMenu);
+                    var popup = optionButton.GetPopup();
+                    if (popup != null)
+                    {
+                        FontService.ApplyFont(popup, FontType.DefaultMenu);
+                    }
+                }
+                else if (child is ItemList itemList)
+                {
+                    FontService.ApplyFont(itemList, FontType.DefaultMenu);
+                }
+                else if (child is Button button)
+                {
+                    FontService.ApplyFont(button, FontType.SecondaryButton);
+                }
+
+                // Recursively traverse container nodes
+                if (child is Control childControl && child.GetChildCount() > 0)
+                {
+                    ApplyFontsToAllUIControls(childControl);
+                }
+            }
+        }
         private async Task RunCinematicIntroAsync()
         {
             await ShowBarAsync("O jogo vai começar!", 1500f);
             await ShowBarAsync("Rolando dados...", 1500f);
-            _rolledValues = GameManager.Instance.UsePhysicalDice ? CollectPhysicalDiceModal() : AttributeUtils.RollFourD6DropLowestSet();
-            await ShowBarAsync($"Resultados: {string.Join(", ", _rolledValues)}", 2500f);
+            
+            if (GameManager.Instance.UsePhysicalDice)
+            {
+                // Physical dice mode: Prompt stat-by-stat and map directly
+                await PromptPhysicalDiceAsync();
+            }
+            else
+            {
+                // Play visual dice animation while generating stats
+                var diceAnimScene = GD.Load<PackedScene>("res://Scenes/DiceRollAnimation.tscn");
+                if (diceAnimScene != null)
+                {
+                    var diceNode = diceAnimScene.Instantiate<DiceRollAnimation>();
+                    AddChild(diceNode);
+                    diceNode.SetResult("4D6");
+                    diceNode.HideAfter3Seconds();
+                    await ToSignal(GetTree().CreateTimer(3.0f), SceneTreeTimer.SignalName.Timeout);
+                }
+
+                // Random mode: Roll pool and let player assign via UI
+                _rolledValues = AttributeUtils.RollFourD6DropLowestSet();
+                InitializeRolls();
+                await ShowBarAsync($"Resultados: {string.Join(", ", _rolledValues)}", 2500f);
+            }
+            
+            UpdateChecklist();
+        }
+
+        private async Task<List<int>> PromptPhysicalDiceAsync()
+        {
+            var scores = new List<int>();
+            _rollAssignments.Clear();
+            
+            string[] statNames = { "Strength", "Constitution", "Dexterity", "Intelligence", "Wisdom", "Charisma" };
+            CharacterAttrib[] attributes = {
+                CharacterAttrib.Strength, 
+                CharacterAttrib.Constitution, 
+                CharacterAttrib.Dexterity, 
+                CharacterAttrib.Intelligence, 
+                CharacterAttrib.Wisdom, 
+                CharacterAttrib.Charisma 
+            };
+
+            if (AttributeAssignmentContainer != null)
+            {
+                foreach (Node child in AttributeAssignmentContainer.GetChildren())
+                    child.QueueFree();
+                
+                var infoLabel = new Label { Text = "Atributos inseridos via Dados Físicos (Ficha Direta)." };
+                AttributeAssignmentContainer.AddChild(infoLabel);
+            }
+
+            for (int i = 0; i < statNames.Length; i++)
+            {
+                string stat = statNames[i];
+                CharacterAttrib attr = attributes[i];
+
+                var tcs = new TaskCompletionSource<string>();
+                ModalService.Instance.ShowPrompt($"Enter physical dice score for {stat} (3-18):", input => {
+                    tcs.SetResult(input);
+                });
+                string input = await tcs.Task;
+                
+                int parsedScore = 12;
+                if (int.TryParse(input, out int val) && val >= 3 && val <= 18)
+                {
+                    parsedScore = val;
+                }
+
+                scores.Add(parsedScore);
+                _rollAssignments[parsedScore] = attr; 
+            }
+
+            await ShowBarAsync("Atributos Físicos Definidos!", 2000f);
+            return scores; // Return the list so it can be assigned to _rolledValues
         }
 
         private async Task ShowBarAsync(string text, float durationMs)
@@ -83,11 +212,6 @@ namespace PursualRPG.Scripts.Scenes
             {
                 await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             }
-        }
-
-        private List<int> CollectPhysicalDiceModal()
-        {
-            return AttributeUtils.RollFourD6DropLowestSet();
         }
 
         private void SetupSelectors()
@@ -112,34 +236,49 @@ namespace PursualRPG.Scripts.Scenes
             }
             _selectedClass = ClassFactoryMap.ClassFactory[CharacterClassEnum.Warrior];
             PopulateSkills();
-
-            if (ExpertiseList != null)
-            {
-                ExpertiseList.SelectMode = ItemList.SelectModeEnum.Multi;
-                ExpertiseList.Clear();
-                foreach (CharacterExpertise exp in Enum.GetValues(typeof(CharacterExpertise)))
-                    ExpertiseList.AddItem(exp.ToString());
-                ExpertiseList.MultiSelected += (idx, selected) => UpdateExpertises();
-            }
+            PopulateExpertises();
         }
 
         private void PopulateSkills()
         {
-            if (SkillList == null) return;
-            SkillList.SelectMode = ItemList.SelectModeEnum.Multi;
-            SkillList.Clear();
-            foreach (var kvp in SkillFactoryRegistry.SkillFactory)
+            if (SkillGrid == null) return;
+            foreach (Node child in SkillGrid.GetChildren()) child.QueueFree();
+            _skillCheckboxes.Clear();
+
+            var classEnum = (CharacterClassEnum)Enum.Parse(typeof(CharacterClassEnum), _selectedClass.Name);
+            var classSkills = SkillFactoryRegistry.SkillFactory.Values
+                .Where(s => s.Classes.Contains(classEnum)).ToList();
+
+            foreach (var skill in classSkills)
             {
-                if (kvp.Value.Classes.Contains((CharacterClassEnum)Enum.Parse(typeof(CharacterClassEnum), _selectedClass.Name)))
-                {
-                    SkillList.AddItem(kvp.Value.Name);
-                }
+                var cb = new CheckBox { Text = skill.Name };
+                cb.AddThemeFontSizeOverride("font_size", 14);
+                cb.Toggled += (state) => UpdateChecklist();
+                SkillGrid.AddChild(cb);
+                _skillCheckboxes.Add(cb);
             }
         }
 
+        private void PopulateExpertises()
+        {
+            if (ExpertiseGrid == null) return;
+            foreach (Node child in ExpertiseGrid.GetChildren()) child.QueueFree();
+            _expertiseCheckboxes.Clear();
+
+            foreach (CharacterExpertise exp in Enum.GetValues(typeof(CharacterExpertise)))
+            {
+                var cb = new CheckBox { Text = exp.ToString() };
+                cb.AddThemeFontSizeOverride("font_size", 14);
+                cb.Toggled += (state) => UpdateChecklist();
+                ExpertiseGrid.AddChild(cb);
+                _expertiseCheckboxes.Add(cb);
+            }
+        }
+
+        // CharacterCreatorScene.cs (InitializeRolls)
         private void InitializeRolls()
         {
-            _rollAssignments.Clear();
+        _rollAssignments.Clear();
             if (AttributeAssignmentContainer == null) return;
 
             foreach (Node child in AttributeAssignmentContainer.GetChildren())
@@ -148,28 +287,24 @@ namespace PursualRPG.Scripts.Scenes
             foreach (var roll in _rolledValues)
             {
                 var hbox = new HBoxContainer();
-                var label = new Label { Text = $"Roll [{roll}]: " };
-                var option = new OptionButton();
-                option.AddItem("-- Select Attribute --");
+                hbox.AddChild(new Label { Text = $"Dice [{roll}]: ", CustomMinimumSize = new Vector2(80, 0) });
+
+                var buttonGroup = new ButtonGroup();
                 foreach (CharacterAttrib attr in Enum.GetValues(typeof(CharacterAttrib)))
-                    option.AddItem(attr.ToString());
-
-                option.ItemSelected += idx => {
-                    if (idx == 0) _rollAssignments.Remove(roll);
-                    else _rollAssignments[roll] = (CharacterAttrib)(idx - 1);
-                    UpdateChecklist();
-                };
-
-                hbox.AddChild(label);
-                hbox.AddChild(option);
+                {
+                    var radio = new CheckBox { Text = attr.ToString(), ButtonGroup = buttonGroup };
+                    radio.Pressed += () => { 
+                        _rollAssignments[roll] = attr; 
+                        UpdateChecklist(); 
+                    };
+                    hbox.AddChild(radio);
+                }
                 AttributeAssignmentContainer.AddChild(hbox);
             }
         }
-
         private void UpdateChecklist()
         {
             if (ChecklistLabel == null) return;
-
             var assignedCounts = new Dictionary<CharacterAttrib, int>();
             foreach (var attr in _rollAssignments.Values)
                 assignedCounts[attr] = assignedCounts.GetValueOrDefault(attr, 0) + 1;
@@ -198,24 +333,29 @@ namespace PursualRPG.Scripts.Scenes
         private void UpdateExpertises()
         {
             _selectedExpertises.Clear();
-            foreach (int idx in ExpertiseList.GetSelectedItems())
+            var allExpertises = (CharacterExpertise[])Enum.GetValues(typeof(CharacterExpertise));
+            for (int i = 0; i < _expertiseCheckboxes.Count; i++)
             {
-                _selectedExpertises.Add((CharacterExpertise)idx);
+                if (_expertiseCheckboxes[i].ButtonPressed && i < allExpertises.Length)
+                {
+                    _selectedExpertises.Add(allExpertises[i]);
+                }
             }
         }
 
         private void UpdateSkillsSelection()
         {
             _selectedSkills.Clear();
-            if (SkillList == null) return;
             var classEnum = (CharacterClassEnum)Enum.Parse(typeof(CharacterClassEnum), _selectedClass.Name);
             var availableSkills = SkillFactoryRegistry.SkillFactory.Values
                 .Where(s => s.Classes.Contains(classEnum)).ToList();
 
-            foreach (int idx in SkillList.GetSelectedItems())
+            for (int i = 0; i < _skillCheckboxes.Count; i++)
             {
-                if (idx < availableSkills.Count)
-                    _selectedSkills.Add(availableSkills[idx]);
+                if (_skillCheckboxes[i].ButtonPressed && i < availableSkills.Count)
+                {
+                    _selectedSkills.Add(availableSkills[i]);
+                }
             }
         }
 
@@ -248,8 +388,7 @@ namespace PursualRPG.Scripts.Scenes
 
             foreach (CharacterAttrib attr in Enum.GetValues(typeof(CharacterAttrib)))
             {
-                int count = assignedCounts.GetValueOrDefault(attr, 0);
-                if (count != 1)
+                if (assignedCounts.GetValueOrDefault(attr, 0) != 1)
                 {
                     error = $"All 6 attributes must be assigned exactly once. Conflict/Missing on {attr}.";
                     return false;
@@ -286,32 +425,93 @@ namespace PursualRPG.Scripts.Scenes
 
             var player = new Player(_selectedName, _selectedClass, _selectedRace, finalAttributes, _selectedSkills, _selectedExpertises);
             GameManager.Instance.CurrentPlayer = player;
-
-            GD.Print($"Character successfully created: {player.Name} [{player.Race} {player.Clazz.Name}]");
             GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
         }
-
-        private void OnRandomPressed()
+        private readonly string[] _randomNames = { "Albatroz", "Gimli", "Legendo", "Lyren", "Elgronnd", "Taurinis", "Kedren", "Vinx" };
+        private async Task OnRandomPressedAsync()
         {
-            _selectedName = "RandomHero";
+            var rng = new Random();
+
+            // 1. Pick a random name from the array
+            if (_randomNames.Length > 0)
+            {
+                _selectedName = _randomNames[rng.Next(_randomNames.Length)];
+            }
+            else
+            {
+                _selectedName = "RandomHero";
+            }
             if (NameInput != null) NameInput.Text = _selectedName;
-            _rolledValues = AttributeUtils.RollFourD6DropLowestSet();
-            
+
+            // 2. Randomize Race and Class OptionButtons
+            if (RaceSelect != null && RaceSelect.ItemCount > 0)
+            {
+                int randomRaceIdx = rng.Next(RaceSelect.ItemCount);
+                RaceSelect.Selected = randomRaceIdx;
+                _selectedRace = (CharacterRace)randomRaceIdx;
+            }
+
+            if (ClassSelect != null && ClassSelect.ItemCount > 0)
+            {
+                int randomClassIdx = rng.Next(ClassSelect.ItemCount);
+                ClassSelect.Selected = randomClassIdx;
+                _selectedClass = ClassFactoryMap.ClassFactory[(CharacterClassEnum)randomClassIdx];
+                PopulateSkills(); // Repopulate skill checkboxes based on the newly selected class
+            }
+
+            // 3. Roll or prompt for attributes (supports physical dice mode safely)
+            _rolledValues = GameManager.Instance.UsePhysicalDice ? await PromptPhysicalDiceAsync() : AttributeUtils.RollFourD6DropLowestSet();
+
             _rollAssignments.Clear();
             int i = 0;
             foreach (CharacterAttrib attr in Enum.GetValues(typeof(CharacterAttrib)))
             {
-                _rollAssignments[_rolledValues[i]] = attr;
-                i++;
+                if (i < _rolledValues.Count)
+                {
+                    _rollAssignments[_rolledValues[i]] = attr;
+                    i++;
+                }
             }
+            InitializeRolls();
+
+            // 4. Randomize starting skills and 4 expertises using Checkbox collections
+            if (_skillCheckboxes != null && _skillCheckboxes.Count > 0)
+            {
+                // Reset all skill checkboxes
+                foreach (var cb in _skillCheckboxes)
+                {
+                    cb.ButtonPressed = false;
+                }
+                
+                // Select one random skill checkbox
+                int randomSkillIdx = rng.Next(_skillCheckboxes.Count);
+                _skillCheckboxes[randomSkillIdx].ButtonPressed = true;
+            }
+
+            if (_expertiseCheckboxes != null && _expertiseCheckboxes.Count >= 4)
+            {
+                // Reset all expertise checkboxes
+                foreach (var cb in _expertiseCheckboxes)
+                {
+                    cb.ButtonPressed = false;
+                }
+
+                // Pick 4 unique random checkboxes and check them
+                var randomExpertiseBoxes = _expertiseCheckboxes
+                    .OrderBy(_ => rng.Next())
+                    .Take(4);
+
+                foreach (var cb in randomExpertiseBoxes)
+                {
+                    cb.ButtonPressed = true;
+                }
+            }
+
+            // 5. Execute all necessary UI synchronizations and proceed to character creation
+            UpdateSkillsSelection();
+            UpdateExpertises();
             UpdateChecklist();
             OnCreatePressed();
         }
     }
 }
-/* Key Changes Made:
-Removed Duplicate Event Binding: Replaced the original standalone ClassSelect.ItemSelected += OnClassSelected; with PopulateSkillsAndExpertises(), which hooks up the combined callback safely.
-
-Node Fallbacks: Added safe fallback resolution for ExpertiseList and SkillSelect inside _Ready().
-
-Initial State Populating: Called OnClassSelectedAndPopulateSkills(0) right after setup to ensure default skills are populated for the initial Warrior class when the scene loads. */

@@ -11,7 +11,8 @@ namespace PursualRPG.Scripts.UI
         private Label _textLabel;
         private ColorRect _topBorder;
         private ColorRect _bottomBorder;
-        private Tween _borderPulseTween;
+        private Tween _topBorderPulseTween;
+        private Tween _bottomBorderPulseTween;
 
         public void Initialize(string text, float holdDurationMs = 2000f)
         {
@@ -47,26 +48,28 @@ namespace PursualRPG.Scripts.UI
             AddChild(_textLabel);
 
             SynthAudioServer.Instance?.PlayRetroWoosh();
-            _borderPulseTween = TweenManager.PulseModulate(this, Colors.Gold, Colors.White, 0.8f);
+
+            // P1.7: Isolate PulseModulate to _topBorder and _bottomBorder instead of the entire node (this)
+            _topBorderPulseTween = TweenManager.PulseModulate(_topBorder, Colors.Gold, Colors.White, 0.8f);
+            _bottomBorderPulseTween = TweenManager.PulseModulate(_bottomBorder, Colors.Gold, Colors.White, 0.8f);
 
             RunCinematicSequence(screenW, y);
         }
 
         private async void RunCinematicSequence(float screenW, float y)
         {
-            var tweenIn = CreateTween();
-            tweenIn.TweenProperty(this, "position", new Vector2(0, y), 0.4f).SetEase(Tween.EaseType.Out);
-            await ToSignal(tweenIn, Tween.SignalName.Finished);
+            Vector2 hiddenPos = new Vector2(screenW, y);
+            Vector2 shownPos = new Vector2(0, y);
+            float holdSeconds = HoldDurationMs / 1000f;
 
-            await ToSignal(GetTree().CreateTimer(HoldDurationMs / 1000f), SceneTreeTimer.SignalName.Timeout);
-
-            var tweenOut = CreateTween();
-            tweenOut.TweenProperty(this, "position", new Vector2(-screenW, y), 0.4f).SetEase(Tween.EaseType.In);
-            await ToSignal(tweenOut, Tween.SignalName.Finished);
-
-            _borderPulseTween?.Kill();
-            IsDone = true;
-            QueueFree();
+            // P1.6: Replace hand-rolled tween logic with TweenManager.SlideInHoldOut
+            await TweenManager.SlideInHoldOut(this, hiddenPos, shownPos, holdSeconds, () =>
+            {
+                _topBorderPulseTween?.Kill();
+                _bottomBorderPulseTween?.Kill();
+                IsDone = true;
+                QueueFree();
+            });
         }
     }
 }

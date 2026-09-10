@@ -75,6 +75,16 @@ namespace PursualRPG.Scripts.Scenes
             _historyText.Text = $"DM:\n{_scenario.InitialMessage}\n";
         }
 
+        private async Task ShowNotificationBarAsync(string text, float durationMs = 2000f)
+        {
+            var bar = new HorizontalUIBar();
+            AddChild(bar);
+            bar.Initialize(text, durationMs);
+            while (!bar.IsDone)
+            {
+                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            }
+        }
         public async Task DisplayChatCardAsync(ChatMessage card)
         {
             string speakerName = string.IsNullOrEmpty(card.SpeakerKey) ? "DM" : Tr(card.SpeakerKey);
@@ -225,6 +235,7 @@ namespace PursualRPG.Scripts.Scenes
                     GameManager.Instance.CurrentPlayer.Xp += xp;
                 }
                 AppendLog($"\n[color=gold][System: Rewarded +{gold} Gold, +{xp} XP][/color]\n");
+                _ = ShowNotificationBarAsync($"Rewarded: +{gold} Gold, +{xp} XP", 2000f);
             }
             else if (command.Name == "give_item" || command.Name == "give_items")
             {
@@ -239,6 +250,7 @@ namespace PursualRPG.Scripts.Scenes
                     GameManager.Instance.CurrentPlayer.GiveItem(itemId, qty);
                     var itemInfo = ItemFactoryRegistry.GetItem(itemId);
                     AppendLog($"\n[color=cyan][System: Received {itemInfo.Name} x{qty}][/color]\n");
+                    _ = ShowNotificationBarAsync($"Received: {itemInfo.Name} x{qty}", 2000f);
                 }
             }
         }
@@ -248,6 +260,7 @@ namespace PursualRPG.Scripts.Scenes
             _combatButton.Visible = true;
             _combatButton.Disabled = false;
             AppendLog("\n[color=red][System: An encounter has begun! Click 'ENTER COMBAT' to engage!][/color]\n");
+            _ = ShowNotificationBarAsync("An encounter has begun!", 2500f);
         }
 
         private void OnCombatButtonPressed()

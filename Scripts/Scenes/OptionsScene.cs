@@ -13,11 +13,11 @@ namespace PursualRPG.Scripts.Scenes
 
         public override void _Ready()
         {
-            _volumeSlider = GetNode<HSlider>("VBoxContainer/VolumeSlider");
-            _muteToggle = GetNode<CheckBox>("VBoxContainer/MuteToggle");
-            _physicalDiceToggle = GetNode<CheckBox>("VBoxContainer/PhysicalDiceToggle");
-            _worldBuilderButton = GetNode<Button>("VBoxContainer/WorldBuilderButton");
-            _backButton = GetNode<Button>("VBoxContainer/BackButton");
+            _volumeSlider = GetNode<HSlider>("ScrollContainer/VBoxContainer/VolumeSlider");
+            _muteToggle = GetNode<CheckBox>("ScrollContainer/VBoxContainer/MuteToggle");
+            _physicalDiceToggle = GetNode<CheckBox>("ScrollContainer/VBoxContainer/PhysicalDiceToggle");
+            _worldBuilderButton = GetNode<Button>("ScrollContainer/VBoxContainer/WorldBuilderButton");
+            _backButton = GetNode<Button>("ScrollContainer/VBoxContainer/BackButton");
 
             _muteToggle.Text = Tr("BTN_MUTE");
             _physicalDiceToggle.Text = Tr("BTN_USE_PHYSICAL_DICE");
@@ -31,7 +31,11 @@ namespace PursualRPG.Scripts.Scenes
 
             _physicalDiceToggle.ButtonPressed = GameManager.Instance.UsePhysicalDice;
 
-            _volumeSlider.ValueChanged += (v) => SynthAudioServer.Instance.SetMasterVolume((float)v);
+            // OptionsScene.cs
+            // Remove Fill/Expand and enforce a strict center alignment
+            _volumeSlider.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+            _volumeSlider.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+            _volumeSlider.CustomMinimumSize = new Vector2(300, 20);
             _muteToggle.Toggled += (t) => SynthAudioServer.Instance.SetMuted(t);
             _physicalDiceToggle.Toggled += (e) => GameManager.Instance.UsePhysicalDice = e;
 

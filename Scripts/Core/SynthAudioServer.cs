@@ -26,6 +26,23 @@ namespace PursualRPG.Scripts.Core
 
             _musicPlayer = new AudioStreamPlayer { Bus = "Master" };
             AddChild(_musicPlayer);
+            _sfxPlayer.Play();
+            _musicPlayer.Play();
+
+            /*
+            sugested generator:
+            Instance = this;
+            _player = new AudioStreamPlayer();
+            var generator = new AudioStreamGenerator();
+            generator.MixRate = 44100;
+            generator.BufferLength = 0.5f;
+            _player.Stream = generator;
+            
+            AddChild(_player);
+            _player.Play(); // CRITICAL: Start the stream!
+
+            and If playing a drone is intended during the menu, you can add a method public void SetDroneActive(bool active) that adjusts the synth's envelope/volume, and call SynthAudioServer.Instance.SetDroneActive(true); inside MainMenuScene.cs _Ready().
+            */
         }
 
         public void PlayButtonClick()

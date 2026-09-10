@@ -60,7 +60,7 @@ namespace PursualRPG.Scripts.UI
 
         private void LoadFrames()
         {
-            string basePath = "res://Assets/Sfx/Dice";
+            string basePath = "res://Assets/Images/dice";
             foreach (var (filename, delay) in _frameConfig)
             {
                 string path = $"{basePath}/{filename}";

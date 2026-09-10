@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3 uid="uid://scenario_assistant_scene"]
 
 [ext_resource type="Script" path="res://Scripts/Scenes/ScenarioAssistantScene.cs" id="1_assistant"]
 [ext_resource type="Script" path="res://Scripts/AI/LLMClient.cs" id="2_llm"]
@@ -16,80 +16,63 @@ script = ExtResource("1_assistant")
 script = ExtResource("2_llm")
 
 [node name="WorldInput" type="TextEdit" parent="."]
-layout_mode = 0
-offset_left = 20.0
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -280.0
 offset_top = 20.0
-offset_right = 500.0
-offset_bottom = 200.0
+offset_right = 280.0
+offset_bottom = 140.0
+grow_horizontal = 2
 placeholder_text = "Enter chronicle concept..."
 
 [node name="OutputView" type="TextEdit" parent="."]
-layout_mode = 0
-offset_left = 20.0
-offset_top = 220.0
-offset_right = 500.0
-offset_bottom = 400.0
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -80.0
+offset_right = 280.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
 editable = false
 
-[node name="BtnUnderstand" type="Button" parent="."]
-layout_mode = 0
-offset_left = 20.0
-offset_top = 420.0
-offset_right = 150.0
-offset_bottom = 460.0
+[node name="ActionFooter" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -280.0
+offset_top = -60.0
+offset_right = 280.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+
+[node name="BtnUnderstand" type="Button" parent="ActionFooter"]
+layout_mode = 2
 text = "Understand"
 
-[node name="BtnCompile" type="Button" parent="."]
-layout_mode = 0
-offset_left = 160.0
-offset_top = 420.0
-offset_right = 290.0
-offset_bottom = 460.0
+[node name="BtnCompile" type="Button" parent="ActionFooter"]
+layout_mode = 2
 text = "Compile"
 
-[node name="BtnGenerate" type="Button" parent="."]
-layout_mode = 0
-offset_left = 300.0
-offset_top = 420.0
-offset_right = 430.0
-offset_bottom = 460.0
+[node name="BtnGenerate" type="Button" parent="ActionFooter"]
+layout_mode = 2
 text = "Generate"
 
-[node name="BtnBack" type="Button" parent="."]
-layout_mode = 0
-offset_left = 440.0
-offset_top = 420.0
-offset_right = 570.0
-offset_bottom = 460.0
+[node name="BtnCopyClipboard" type="Button" parent="ActionFooter"]
+layout_mode = 2
+text = "Copy Output"
+
+[node name="BtnBack" type="Button" parent="ActionFooter"]
+layout_mode = 2
 text = "Back"
-
-<!-- Deferred Phase 6.4 Buttons (Hidden/Disabled) -->
-[node name="BtnAgenticPrompt" type="Button" parent="."]
-visible = false
-disabled = true
-layout_mode = 0
-offset_left = 20.0
-offset_top = 470.0
-offset_right = 180.0
-offset_bottom = 510.0
-text = "Agentic Prompt"
-
-[node name="BtnCopyClipboard" type="Button" parent="."]
-visible = false
-disabled = true
-layout_mode = 0
-offset_left = 190.0
-offset_top = 470.0
-offset_right = 310.0
-offset_bottom = 510.0
-text = "Copy Json"
-
-[node name="BtnSaveFile" type="Button" parent="."]
-visible = false
-disabled = true
-layout_mode = 0
-offset_left = 320.0
-offset_top = 470.0
-offset_right = 440.0
-offset_bottom = 510.0
-text = "Save Scenario"

@@ -25,19 +25,57 @@ namespace PursualRPG.Scripts.UI
             _frameDelay = 1.0f / _effectiveFps;
             LoadFramesFromAssets();
 
-            // Locate the sibling RichTextLabel in the SubViewport
             _displayLabel = GetNodeOrNull<RichTextLabel>("../ASCIIDisplay");
-            
-            // Apply centralized typography to ensure terminal-like ASCII mapping
             if (_displayLabel != null)
             {
                 FontService.ApplyFont(_displayLabel, FontType.ChatReading);
+                AdjustFontSizeToViewport();
             }
+
+            // Subscribe to the root window size changed event in Godot 4
+            GetTree().Root.SizeChanged += OnWindowResized;
+        }
+
+        public override void _ExitTree()
+        {
+            // Unsubscribe to avoid memory leaks when changing scenes
+            if (GetTree()?.Root != null)
+            {
+                GetTree().Root.SizeChanged -= OnWindowResized;
+            }
+        }
+
+        private void OnWindowResized()
+        {
+            var viewport = GetViewport();
+            if (viewport != null)
+            {
+                var subViewport = GetNodeOrNull<SubViewport>("..");
+                if (subViewport != null)
+                {
+                    subViewport.Size = (Vector2I)viewport.GetVisibleRect().Size;
+                }
+            }
+            AdjustFontSizeToViewport();
+        }
+
+        private void AdjustFontSizeToViewport()
+        {
+        if (_displayLabel == null) return;
+        var viewportSize = GetViewport().GetVisibleRect().Size;
+        
+        // Drastically reduce divisor to shrink the text to fit 100+ column ASCII art
+        int adaptiveSize = Mathf.Clamp((int)(viewportSize.X / 120.0f), 6, 12);
+        
+        _displayLabel.AddThemeFontSizeOverride("normal_font_size", adaptiveSize);
+        
+        // Force tighter line heights to prevent vertical overflow
+        _displayLabel.AddThemeConstantOverride("line_separation", -3);
+        _displayLabel.BbcodeEnabled = true;
         }
 
         public override void _Process(double delta)
         {
-            // Push the current frame to the UI continuously, decoupled from GameManager screen changes
             if (_displayLabel != null && _frameContents.Count > 0)
             {
                 _displayLabel.Text = GetCurrentFrameText();
@@ -47,41 +85,30 @@ namespace PursualRPG.Scripts.UI
         public bool LoadFramesFromAssets()
         {
             string targetDir = ProjectSettings.GlobalizePath("res://Assets/ASCIItxtFrames");
-            if (!Directory.Exists(targetDir))
-            {
-                GD.PrintErr($"[ASCII Player] Warning: Frame directory not found at {targetDir}");
-                return false;
-            }
+            if (!Directory.Exists(targetDir)) return false;
 
             var frameFiles = Directory.GetFiles(targetDir, "frame_*.txt").OrderBy(f => f).ToList();
-            if (frameFiles.Count == 0)
-            {
-                GD.PrintErr("[ASCII Player] Warning: No frame files found.");
-                return false;
-            }
+            if (frameFiles.Count == 0) return false;
 
             _frameContents.Clear();
             foreach (var file in frameFiles)
             {
                 _frameContents.Add(File.ReadAllText(file));
             }
-
-            GD.Print($"[ASCII Player] Successfully loaded {_frameContents.Count} frames at {_effectiveFps:F2} FPS.");
             return _frameContents.Count > 0;
         }
 
         public string GetCurrentFrameText()
         {
-            if (_frameContents.Count == 0) return string.Empty;
-
-            double now = Time.GetTicksMsec() / 1000.0;
-            if (now - _lastFrameTime >= _frameDelay)
-            {
-                _currentFrameIdx = (_currentFrameIdx + 1) % _frameContents.Count;
-                _lastFrameTime = now;
-            }
-
-            return _frameContents[_currentFrameIdx];
+        if (_frameContents.Count == 0) return string.Empty;
+        double now = Time.GetTicksMsec() / 1000.0;
+        if (now - _lastFrameTime >= _frameDelay)
+        {
+            _currentFrameIdx = (_currentFrameIdx + 1) % _frameContents.Count;
+            _lastFrameTime = now;
+        }
+        // Wrap in BBCode center tags to fix the top-left origin issue
+        return $"[center]{_frameContents[_currentFrameIdx]}[/center]";
         }
     }
 }

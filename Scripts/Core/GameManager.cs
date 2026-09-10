@@ -43,7 +43,20 @@ namespace PursualRPG.Scripts.Core
 
 		public void ChangeScene(string scenePath)
 		{
-			var uiLayer = GetTree().Root.GetNode<CanvasLayer>("Main/UILayer");
+			var uiLayer = GetTree().Root.GetNodeOrNull<CanvasLayer>("Main/UILayer");
+			if (uiLayer == null)
+			{
+				GD.PrintErr("Fatal Error: 'Main/UILayer' CanvasLayer not found in scene tree!");
+				return;
+			}
+
+			// Enable ASCII background only for Main Menu & Splash scenes
+			var bgLayer = GetTree().Root.GetNodeOrNull<CanvasLayer>("Main/BackgroundLayer");
+			if (bgLayer != null)
+			{
+				bool isMenuOrSplash = scenePath.EndsWith("MainMenuScene.tscn") || scenePath.EndsWith("SplashScene.tscn");
+				bgLayer.Visible = isMenuOrSplash;
+			}
 
 			foreach (var child in uiLayer.GetChildren())
 				child.QueueFree();
