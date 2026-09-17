@@ -45,6 +45,9 @@ project.fragment.lock.json
 # Context folder:
 context_builder_rs
 
+# Local Config File
+sc_config.cfg
+
 # ==========================================
 # Operating System (Optional, but recommended)
 # ==========================================

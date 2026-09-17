@@ -77,11 +77,29 @@ text = "ENTER COMBAT"
 [node name="CharacterSheetButton" type="Button" parent="."]
 z_index = 10
 layout_mode = 0
-offset_left = 960.0
+offset_left = 800.0
+offset_top = 16.0
+offset_right = 920.0
+offset_bottom = 52.0
+text = "Sheet"
+
+[node name="SaveButton" type="Button" parent="."]
+z_index = 10
+layout_mode = 0
+offset_left = 930.0
+offset_top = 16.0
+offset_right = 1020.0
+offset_bottom = 52.0
+text = "Save"
+
+[node name="OptionsButton" type="Button" parent="."]
+z_index = 10
+layout_mode = 0
+offset_left = 1030.0
 offset_top = 16.0
 offset_right = 1128.0
 offset_bottom = 52.0
-text = "Character Sheet"
+text = "Options"
 
 [node name="StreamPreview" type="RichTextLabel" parent="."]
 layout_mode = 0
@@ -95,10 +113,20 @@ script = ExtResource("3_stream")
 [node name="CharacterSheetPanel" type="Control" parent="."]
 layout_mode = 0
 offset_left = 742.0
-offset_top = 0.0
+offset_top = 60.0
 offset_right = 1152.0
 offset_bottom = 648.0
 script = ExtResource("2_sheet")
+
+[node name="PanelBackground" type="ColorRect" parent="CharacterSheetPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.1, 0.15, 0.9)
+mouse_filter = 2
 
 [node name="NameLabel" type="Label" parent="CharacterSheetPanel"]
 layout_mode = 0

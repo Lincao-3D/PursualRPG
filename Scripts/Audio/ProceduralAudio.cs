@@ -111,13 +111,16 @@ namespace PursualRPG.Scripts.Audio
 
         private static AudioStreamWav CreateStream(byte[] data, bool loop = false)
         {
+            int sampleCount = data.Length / 4; // 16-bit stereo = 4 bytes per sample frame
             return new AudioStreamWav
             {
                 Format = AudioStreamWav.FormatEnum.Format16Bits,
                 MixRate = SampleRate,
                 Stereo = true,
                 Data = data,
-                LoopMode = loop ? AudioStreamWav.LoopModeEnum.Forward : AudioStreamWav.LoopModeEnum.Disabled
+                LoopMode = loop ? AudioStreamWav.LoopModeEnum.Forward : AudioStreamWav.LoopModeEnum.Disabled,
+                LoopBegin = 0,
+                LoopEnd = loop ? sampleCount : 0
             };
         }
     }

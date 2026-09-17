@@ -63,6 +63,10 @@ text = "Use Physical Dice"
 layout_mode = 2
 text = "World Builder Assistant"
 
+[node name="ReturnButton" type="Button" parent="ScrollContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Return to Game"
+
 [node name="BackButton" type="Button" parent="ScrollContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Back to Main Menu"

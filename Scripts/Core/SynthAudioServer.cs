@@ -73,12 +73,28 @@ namespace PursualRPG.Scripts.Core
 
         public void PlayDungeonSynthTheme()
         {
+            // Diagnostic (c before call): Check player state
+            // GD.Print($"[Diagnostics] PlayDungeonSynthTheme called. _musicPlayer.Playing: {_musicPlayer.Playing}, Stream assigned: {_musicPlayer.Stream != null}");
+
             if (_musicPlayer.Playing && _musicPlayer.Stream != null) return;
             _dungeonSynthCache ??= ProceduralAudio.GenerateDungeonSynthTheme();
             _musicPlayer.Stream = _dungeonSynthCache;
+            
+            // Diagnostic (b): Verify Play() is reached
+            // GD.Print("[Diagnostics] Reached _musicPlayer.Play() execution point.");
             _musicPlayer.Play();
-        }
 
+            // Diagnostic (c after call): Check if audio stream successfully registered as playing
+            // GD.Print($"[Diagnostics] Post-Play state -> _musicPlayer.Playing: {_musicPlayer.Playing}, Stream != null: {_musicPlayer.Stream != null}");
+        }
+        public void StopMusic()
+        {
+            if (_musicPlayer != null)
+            {
+                _musicPlayer.Stop();
+                _musicPlayer.Stream = null;
+            }
+        }
         public void SetMasterVolume(float volumeLinear)
         {
             MasterVolume = volumeLinear;

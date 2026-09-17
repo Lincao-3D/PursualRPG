@@ -12,6 +12,8 @@ namespace PursualRPG.Scripts.Scenes
     public partial class CharacterCreatorScene : Control
     {
         private string _selectedName = "Hero";
+        private bool _hasCustomName = false;
+        private bool _isProgrammaticChange = false;
         private CharacterRace _selectedRace = CharacterRace.Human;
         private CharacterClass _selectedClass;
         private List<Skill> _selectedSkills = new();
@@ -39,11 +41,13 @@ namespace PursualRPG.Scripts.Scenes
 
         private void SyncNodeReferences()
         {
-            // Fallback node retrieval using existing public properties
             ChecklistLabel ??= GetNodeOrNull<RichTextLabel>("%ChecklistLabel") ?? GetNodeOrNull<RichTextLabel>("ScrollContainer/MarginContainer/VBoxContainer/ChecklistLabel") ?? GetNodeOrNull<RichTextLabel>("ScrollContainer/VBoxContainer/ChecklistLabel");
             ExpertiseGrid ??= GetNodeOrNull<GridContainer>("%ExpertiseGrid") ?? GetNodeOrNull<GridContainer>("ScrollContainer/MarginContainer/VBoxContainer/ExpertiseGrid") ?? GetNodeOrNull<GridContainer>("ScrollContainer/VBoxContainer/ExpertiseGrid");
             SkillGrid ??= GetNodeOrNull<GridContainer>("%SkillGrid") ?? GetNodeOrNull<GridContainer>("ScrollContainer/MarginContainer/VBoxContainer/SkillGrid") ?? GetNodeOrNull<GridContainer>("ScrollContainer/VBoxContainer/SkillGrid");
-            CreateButton ??= GetNodeOrNull<Button>("%CreateButton") ?? GetNodeOrNull<Button>("ActionFooter/CreateButton") ?? GetNodeOrNull<Button>("ScrollContainer/MarginContainer/VBoxContainer/CreateButton") ?? GetNodeOrNull<Button>("ScrollContainer/VBoxContainer/CreateButton");
+            
+            CreateButton ??= GetNodeOrNull<Button>("%CreateButton") ?? GetNodeOrNull<Button>("ActionFooter/CreateButton") ?? GetNodeOrNull<Button>("ScrollContainer/MarginContainer/VBoxContainer/CreateButton");
+            RandomButton ??= GetNodeOrNull<Button>("%RandomButton") ?? GetNodeOrNull<Button>("ActionFooter/RandomButton") ?? GetNodeOrNull<Button>("ScrollContainer/MarginContainer/VBoxContainer/RandomButton");
+            MenuButton ??= GetNodeOrNull<Button>("%MenuButton") ?? GetNodeOrNull<Button>("ActionFooter/MenuButton") ?? GetNodeOrNull<Button>("ScrollContainer/MarginContainer/VBoxContainer/MenuButton");
         }
         public override async void _Ready()
         {
@@ -81,8 +85,16 @@ namespace PursualRPG.Scripts.Scenes
             if (CreateButton != null) CreateButton.Pressed += OnCreatePressed;
             if (RandomButton != null) RandomButton.Pressed += () => _ = OnRandomPressedAsync();
             if (RerollButton != null) RerollButton.Pressed += OnRerollPressed;
-            if (NameInput != null) NameInput.TextChanged += text => _selectedName = text;
-
+            if (NameInput != null) 
+            {
+                NameInput.TextChanged += text => {
+                    if (!_isProgrammaticChange)
+                    {
+                        _selectedName = text;
+                        _hasCustomName = true; // Marks that the player typed a custom name
+                    }
+                };
+            }
             if (MenuButton != null)
             {
                 MenuButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/MainMenuScene.tscn");
@@ -276,9 +288,17 @@ namespace PursualRPG.Scripts.Scenes
         }
 
         // CharacterCreatorScene.cs (InitializeRolls)
-        private void InitializeRolls()
+        private void InitializeRolls(Dictionary<int, CharacterAttrib> preAssignments = null)
         {
-        _rollAssignments.Clear();
+            if (preAssignments != null)
+            {
+                _rollAssignments = new Dictionary<int, CharacterAttrib>(preAssignments);
+            }
+            else
+            {
+                _rollAssignments.Clear();
+            }
+
             if (AttributeAssignmentContainer == null) return;
 
             foreach (Node child in AttributeAssignmentContainer.GetChildren())
@@ -293,6 +313,13 @@ namespace PursualRPG.Scripts.Scenes
                 foreach (CharacterAttrib attr in Enum.GetValues(typeof(CharacterAttrib)))
                 {
                     var radio = new CheckBox { Text = attr.ToString(), ButtonGroup = buttonGroup };
+                    
+                    // Check the radio button if this attribute is pre-assigned to this roll
+                    if (_rollAssignments.TryGetValue(roll, out var assignedAttr) && assignedAttr == attr)
+                    {
+                        radio.ButtonPressed = true;
+                    }
+
                     radio.Pressed += () => { 
                         _rollAssignments[roll] = attr; 
                         UpdateChecklist(); 
@@ -427,11 +454,35 @@ namespace PursualRPG.Scripts.Scenes
             GameManager.Instance.CurrentPlayer = player;
             GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
         }
-        private readonly string[] _randomNames = { "Albatroz", "Gimli", "Legendo", "Lyren", "Elgronnd", "Taurinis", "Kedren", "Vinx" };
+        // old random names list, just for reference
+        // private readonly string[] _randomNames = { "Albatroz", "Gimli", "Legendo", "Lyren", "Elgronnd", "Taurinis", "Kedren", "Vinx" };
         private async Task OnRandomPressedAsync()
         {
             var rng = new Random();
-
+            // 1. Handle Name: Preserve custom player input, otherwise generate a procedural name
+            if (NameInput != null)
+            {
+                string currentText = NameInput.Text.Trim();
+                
+                // Check if it's still the default value or empty
+                if (string.IsNullOrEmpty(currentText) || currentText == "Hero" || currentText == "RandomHero")
+                {
+                    _selectedName = RandomNamesFactory.GenerateName();
+                    NameInput.Text = _selectedName;
+                }
+                else
+                {
+                    // Preserve whatever the player typed
+                    _selectedName = currentText;
+                }
+            }
+            else
+            {
+                _selectedName = RandomNamesFactory.GenerateName();
+            }
+ 
+            /* 
+            // Old random name selection logic, commented out for now
             // 1. Pick a random name from the array
             if (_randomNames.Length > 0)
             {
@@ -441,7 +492,7 @@ namespace PursualRPG.Scripts.Scenes
             {
                 _selectedName = "RandomHero";
             }
-            if (NameInput != null) NameInput.Text = _selectedName;
+            if (NameInput != null) NameInput.Text = _selectedName; */
 
             // 2. Randomize Race and Class OptionButtons
             if (RaceSelect != null && RaceSelect.ItemCount > 0)
@@ -460,32 +511,44 @@ namespace PursualRPG.Scripts.Scenes
             }
 
             // 3. Roll or prompt for attributes (supports physical dice mode safely)
-            _rolledValues = GameManager.Instance.UsePhysicalDice ? await PromptPhysicalDiceAsync() : AttributeUtils.RollFourD6DropLowestSet();
-
-            _rollAssignments.Clear();
-            int i = 0;
-            foreach (CharacterAttrib attr in Enum.GetValues(typeof(CharacterAttrib)))
+            if (GameManager.Instance.UsePhysicalDice)
             {
-                if (i < _rolledValues.Count)
-                {
-                    _rollAssignments[_rolledValues[i]] = attr;
-                    i++;
-                }
+                _rolledValues = await PromptPhysicalDiceAsync();
+                InitializeRolls(_rollAssignments);
             }
-            InitializeRolls();
-
-            // 4. Randomize starting skills and 4 expertises using Checkbox collections
-            if (_skillCheckboxes != null && _skillCheckboxes.Count > 0)
+            else
             {
-                // Reset all skill checkboxes
-                foreach (var cb in _skillCheckboxes)
+                _rolledValues = AttributeUtils.RollFourD6DropLowestSet();
+                
+                var autoAssignments = new Dictionary<int, CharacterAttrib>();
+                var attributes = Enum.GetValues(typeof(CharacterAttrib))
+                                    .Cast<CharacterAttrib>()
+                                    .OrderBy(_ => rng.Next())
+                                    .ToList();
+
+                // Ensure all 6 attributes are mapped uniquely 1-to-1 with the 6 rolled values
+                for (int i = 0; i < _rolledValues.Count && i < attributes.Count; i++)
                 {
-                    cb.ButtonPressed = false;
+                    autoAssignments[_rolledValues[i]] = attributes[i];
                 }
                 
-                // Select one random skill checkbox
-                int randomSkillIdx = rng.Next(_skillCheckboxes.Count);
-                _skillCheckboxes[randomSkillIdx].ButtonPressed = true;
+                InitializeRolls(autoAssignments);
+            }
+
+            // 4. Randomize starting skills (at least 2, up to all available)
+            if (_skillCheckboxes != null && _skillCheckboxes.Count >= 2)
+            {
+                foreach (var cb in _skillCheckboxes) cb.ButtonPressed = false;
+
+                int skillsToPick = rng.Next(2, _skillCheckboxes.Count + 1);
+                var randomSkillBoxes = _skillCheckboxes
+                    .OrderBy(_ => rng.Next())
+                    .Take(skillsToPick);
+
+                foreach (var cb in randomSkillBoxes)
+                {
+                    cb.ButtonPressed = true;
+                }
             }
 
             if (_expertiseCheckboxes != null && _expertiseCheckboxes.Count >= 4)

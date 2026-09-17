@@ -8,13 +8,40 @@ namespace PursualRPG.Scripts.AI
     {
         private HttpRequest _httpRequest;
         private string _apiKey;
-        private string _modelName = "gemini-2.5-flash"; // Or configured model
+        private string _modelName = "gemini-3.1-flash-lite"; // Or gemini-2.5-flash, or another configured model
 
         public override void _Ready()
         {
             _httpRequest = new HttpRequest();
             AddChild(_httpRequest);
             _apiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "";
+            // 2. Fallback logic for local development if you haven't set the system variable yet
+            if (string.IsNullOrEmpty(_apiKey))
+            {
+                GD.PushWarning("GEMINI_API_KEY environment variable not found. Trying local config...");
+                LoadFromLocalConfig();
+            }
+
+            if (string.IsNullOrEmpty(_apiKey))
+            {
+                GD.PushError("Critical: AI model settings could not be loaded! Requests will fail.");
+            }
+            else
+            {
+                GD.Print("LLM settings loaded successfully.");
+            }
+        }
+
+        private void LoadFromLocalConfig()
+        {
+            var config = new ConfigFile();
+            // Reads from a local file in your project folder
+            Error err = config.Load("res://sc_config.cfg");
+            
+            if (err == Error.Ok)
+            {
+                _apiKey = (string)config.GetValue("api", "GEMINI_API_KEY", "");
+            }
         }
 
         public async Task<string> GenerateContentAsync(string systemPrompt, string userMessage)

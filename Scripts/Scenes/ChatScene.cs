@@ -26,53 +26,72 @@ namespace PursualRPG.Scripts.Scenes
 
         private CharacterSheetPanel _characterSheetPanel;
         private Button _characterSheetButton;
+        private Button _saveButton;
+        private Button _optionsButton;
         private TypewriterLabel _streamPreview;
 
         public override void _Ready()
         {
             if (MessageBroker == null) MessageBroker = GetNodeOrNull<AIMessageBroker>("MessageBroker");
 
-            _historyText = GetNode<RichTextLabel>("VBoxContainer/ScrollContainer/HistoryText");
-            _userInput = GetNode<LineEdit>("VBoxContainer/HBoxContainer/UserInput");
-            _submitButton = GetNode<Button>("VBoxContainer/HBoxContainer/SubmitButton");
+            _historyText = GetNodeOrNull<RichTextLabel>("MarginContainer/VBoxContainer/ScrollContainer/HistoryText") ?? GetNode<RichTextLabel>("VBoxContainer/ScrollContainer/HistoryText");
+            _userInput = GetNodeOrNull<LineEdit>("MarginContainer/VBoxContainer/HBoxContainer/UserInput") ?? GetNode<LineEdit>("VBoxContainer/HBoxContainer/UserInput");
+            _submitButton = GetNodeOrNull<Button>("MarginContainer/VBoxContainer/HBoxContainer/SubmitButton") ?? GetNode<Button>("VBoxContainer/HBoxContainer/SubmitButton");
             _combatButton = GetNode<Button>("CombatButton");
             _characterSheetPanel = GetNode<CharacterSheetPanel>("CharacterSheetPanel");
             _characterSheetButton = GetNode<Button>("CharacterSheetButton");
+            _saveButton = GetNodeOrNull<Button>("SaveButton");
+            _optionsButton = GetNodeOrNull<Button>("OptionsButton");
             _streamPreview = GetNode<TypewriterLabel>("StreamPreview");
 
-            _submitButton.Text = Tr("BTN_SUBMIT");
+            _submitButton.Text = "Submit";
             _combatButton.Text = "ENTER COMBAT";
-            _characterSheetButton.Text = Tr("BTN_CHARACTER_SHEET");
+            if (_characterSheetButton != null) _characterSheetButton.Text = "Sheet";
+            if (_saveButton != null) _saveButton.Text = "Save";
+            if (_optionsButton != null) _optionsButton.Text = "Options";
 
-            FontService.ApplyFont(_historyText, FontType.ChatReading);
-            FontService.ApplyFont(_userInput, FontType.ChatReading);
-            FontService.ApplyFont(_streamPreview, FontType.ChatReading);
+            if (_historyText != null) FontService.ApplyFont(_historyText, FontType.ChatReading);
+            if (_userInput != null) FontService.ApplyFont(_userInput, FontType.ChatReading);
+            if (_streamPreview != null) FontService.ApplyFont(_streamPreview, FontType.ChatReading);
 
-            _submitButton.BindAudioAndFont(FontType.SecondaryButton);
-            _combatButton.BindAudioAndFont(FontType.SecondaryButton);
-            _characterSheetButton.BindAudioAndFont(FontType.SecondaryButton);
+            _submitButton?.BindAudioAndFont(FontType.SecondaryButton);
+            _combatButton?.BindAudioAndFont(FontType.SecondaryButton);
+            _characterSheetButton?.BindAudioAndFont(FontType.SecondaryButton);
+            _saveButton?.BindAudioAndFont(FontType.SecondaryButton);
+            _optionsButton?.BindAudioAndFont(FontType.SecondaryButton);
 
-            _submitButton.Pressed += OnSubmitPressed;
-            _userInput.TextSubmitted += OnTextSubmitted;
-            _combatButton.Pressed += OnCombatButtonPressed;
-            _characterSheetButton.Pressed += ToggleCharacterSheet;
+            if (_submitButton != null) _submitButton.Pressed += OnSubmitPressed;
+            if (_userInput != null) _userInput.TextSubmitted += OnTextSubmitted;
+            if (_combatButton != null) _combatButton.Pressed += OnCombatButtonPressed;
+            
+            // Wire Sheet, Save, and Options buttons
+            if (_characterSheetButton != null) _characterSheetButton.Pressed += ToggleCharacterSheet;
+            if (_saveButton != null) _saveButton.Pressed += OnSaveButtonPressed;
+            if (_optionsButton != null) _optionsButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/OptionsScene.tscn");
 
             if (MessageBroker != null) MessageBroker.OnTokenStreamed += OnTokenStreamed;
 
-            _combatButton.Visible = false;
-            _combatButton.Disabled = true;
-            _streamPreview.Visible = false;
+            if (_combatButton != null)
+            {
+                _combatButton.Visible = false;
+                _combatButton.Disabled = true;
+            }
+            if (_streamPreview != null) _streamPreview.Visible = false;
 
             _scenario = Scenario.DefaultScenario;
             if (MessageBroker != null) MessageBroker.ActiveScenario = _scenario;
 
-            _characterSheetPanel.Initialize(GameManager.Instance.CurrentPlayer);
+            // Initialize sheet once on ready without resetting toggle state afterwards
+            if (_characterSheetPanel != null && GameManager.Instance.CurrentPlayer != null)
+            {
+                _characterSheetPanel.Initialize(GameManager.Instance.CurrentPlayer);
+            }
             InitializeChatHistory();
         }
 
         private void InitializeChatHistory()
         {
-            _historyText.Text = $"DM:\n{_scenario.InitialMessage}\n";
+            if (_historyText != null) _historyText.Text = $"DM:\n{_scenario.InitialMessage}\n";
         }
 
         private async Task ShowNotificationBarAsync(string text, float durationMs = 2000f)
@@ -85,8 +104,10 @@ namespace PursualRPG.Scripts.Scenes
                 await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             }
         }
+
         public async Task DisplayChatCardAsync(ChatMessage card)
         {
+            if (_historyText == null) return;
             string speakerName = string.IsNullOrEmpty(card.SpeakerKey) ? "DM" : Tr(card.SpeakerKey);
             _historyText.AppendText($"\n[color=yellow]{speakerName}:[/color] ");
 
@@ -96,7 +117,7 @@ namespace PursualRPG.Scripts.Scenes
                 await ToSignal(GetTree().CreateTimer(TextSpeed), SceneTreeTimer.SignalName.Timeout);
             }
 
-            _userInput.Visible = !card.IsNarrative;
+            if (_userInput != null) _userInput.Visible = !card.IsNarrative;
             if (_submitButton != null) _submitButton.Visible = !card.IsNarrative;
 
             if (card.Choices != null && card.Choices.Count > 0)
@@ -111,7 +132,7 @@ namespace PursualRPG.Scripts.Scenes
             }
         }
 
-        private void OnSubmitPressed() => ProcessInput(_userInput.Text);
+        private void OnSubmitPressed() { if (_userInput != null) ProcessInput(_userInput.Text); }
         private void OnTextSubmitted(string text) => ProcessInput(text);
 
         private void ProcessInput(string text)
@@ -122,21 +143,21 @@ namespace PursualRPG.Scripts.Scenes
             if (_savingMode)
             {
                 GameManager.Instance.SaveGame();
-                AppendLog($"\n[color=gray][System: {string.Format(Tr("MSG_GAME_SAVED"), text)}][/color]\n");
+                AppendLog($"\n[color=gray][System: Game saved successfully!][/color]\n");
                 _savingMode = false;
-                _userInput.Clear();
+                _userInput?.Clear();
                 return;
             }
 
             if (text.StartsWith("/"))
             {
                 HandleCommand(text);
-                _userInput.Clear();
+                _userInput?.Clear();
                 return;
             }
 
-            _userInput.Clear();
-            AppendLog($"\n[color=green]{Tr("TXT_PLAYER")}:[/color]\n{text}\n[color=yellow]{Tr("TXT_DM")}:[/color]\n");
+            _userInput?.Clear();
+            AppendLog($"\n[color=green]Player:[/color]\n{text}\n[color=yellow]DM:[/color]\n");
             SendToLLM(text);
         }
 
@@ -156,29 +177,39 @@ namespace PursualRPG.Scripts.Scenes
             }
             else if (command == "save")
             {
-                _savingMode = true;
-                AppendLog($"\n{Tr("MSG_ENTER_SAVE_NAME")}\n");
+                OnSaveButtonPressed();
             }
+        }
+
+        private void OnSaveButtonPressed()
+        {
+            GameManager.Instance.SaveGame();
+            AppendLog($"\n[color=gray][System: Game progress saved!][/color]\n");
+            _ = ShowNotificationBarAsync("Game Saved!", 2000f);
         }
 
         private void OnTokenStreamed(string token)
         {
+            if (_streamPreview == null) return;
             _streamPreview.Visible = true;
             _streamPreview.Text += token;
         }
 
         private void ToggleCharacterSheet()
         {
-            if (GameManager.Instance.CurrentPlayer == null) return;
-            _characterSheetPanel.Initialize(GameManager.Instance.CurrentPlayer);
+            if (GameManager.Instance.CurrentPlayer == null || _characterSheetPanel == null) return;
+            // Only toggle the sliding position without calling Initialize() again, preventing reset bugs
             _characterSheetPanel.Toggle();
         }
 
         private void SendToLLM(string prompt)
         {
             if (MessageBroker == null) return;
-            _streamPreview.Text = string.Empty;
-            _streamPreview.Visible = true;
+            if (_streamPreview != null)
+            {
+                _streamPreview.Text = string.Empty;
+                _streamPreview.Visible = true;
+            }
 
             MessageBroker.SendMessageAsync(prompt, response => {
                 CallDeferred(nameof(FinishStreamingResponse), response);
@@ -187,8 +218,11 @@ namespace PursualRPG.Scripts.Scenes
 
         private void FinishStreamingResponse(string responseText)
         {
-            _streamPreview.Visible = false;
-            _streamPreview.Text = string.Empty;
+            if (_streamPreview != null)
+            {
+                _streamPreview.Visible = false;
+                _streamPreview.Text = string.Empty;
+            }
             ReceiveLLMResponse(responseText);
         }
 
@@ -257,8 +291,11 @@ namespace PursualRPG.Scripts.Scenes
 
         public void WaitCombatConfirm(Combat combat)
         {
-            _combatButton.Visible = true;
-            _combatButton.Disabled = false;
+            if (_combatButton != null)
+            {
+                _combatButton.Visible = true;
+                _combatButton.Disabled = false;
+            }
             AppendLog("\n[color=red][System: An encounter has begun! Click 'ENTER COMBAT' to engage!][/color]\n");
             _ = ShowNotificationBarAsync("An encounter has begun!", 2500f);
         }
@@ -271,7 +308,7 @@ namespace PursualRPG.Scripts.Scenes
 
         private void AppendLog(string message)
         {
-            _historyText.AppendText(message);
+            _historyText?.AppendText(message);
         }
     }
 }

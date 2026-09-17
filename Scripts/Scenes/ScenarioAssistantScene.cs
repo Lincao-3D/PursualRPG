@@ -24,25 +24,44 @@ namespace PursualRPG.Scripts.Scenes
 
         public override void _Ready()
         {
-            // Node Fallback Resolution
+            // Node Fallback Resolution[cite: 3]
             WorldInput ??= GetNode<TextEdit>("WorldInput");
             OutputLabel ??= GetNode<RichTextLabel>("OutputLabel");
             BtnUnderstand ??= GetNode<Button>("ActionFooter/BtnUnderstand");
             BtnCompile ??= GetNode<Button>("ActionFooter/BtnCompile");
             BtnGenerate ??= GetNode<Button>("ActionFooter/BtnGenerate");
-            CopyButton ??= GetNodeOrNull<Button>("ActionFooter/BtnCopyClipboard");
+            CopyButton ??= GetNodeOrNull<Button>("OutputContainer/CopyButton") 
+             ?? GetNodeOrNull<Button>("CopyButton") 
+             ?? GetNodeOrNull<Button>("ActionFooter/BtnCopyClipboard");
             BackButton ??= GetNode<Button>("ActionFooter/BtnBack");
 
             _llmClient = GetNodeOrNull<LLMClient>("LLMClient") ?? new LLMClient();
             if (_llmClient.GetParent() == null) AddChild(_llmClient);
 
-            // Labels and Typography
-            if (BtnUnderstand != null) BtnUnderstand.Text = "Understand";
-            if (BtnCompile != null) BtnCompile.Text = Tr("BTN_COMPILE");
-            if (BtnGenerate != null) BtnGenerate.Text = Tr("BTN_GENERATE");
+            // Set Initial Button Texts and Tooltips (Localization/Strings)
+            if (BtnUnderstand != null) 
+            {
+                BtnUnderstand.Text = "1. Entenda o cenário atual";
+                BtnUnderstand.TooltipText = "Exibe as diretrizes e a mensagem inicial ativa do Mestre.";
+            }
+            if (BtnCompile != null) 
+            {
+                BtnCompile.Text = "2. Compilar mecânica e diretrizes de cenário do usuário";
+                BtnCompile.TooltipText = "Lê a pasta src/model e comprime o código para a IA.";
+            }
+            if (BtnGenerate != null) 
+            {
+                BtnGenerate.Text = "Gerar novo mundo via IA";
+                BtnGenerate.TooltipText = "Gera um novo DEFAULT_SCENARIO para o scenario.py.";
+            }
             if (BackButton != null) BackButton.Text = Tr("BTN_BACK");
-            if (CopyButton != null) CopyButton.Text = "Copy Output";
+            if (CopyButton != null) 
+            {
+                CopyButton.Text = "📋"; // Icon style representation
+                CopyButton.TooltipText = "Copiar conteúdo";
+            }
 
+            // Apply Fonts[cite: 3]
             if (WorldInput != null) FontService.ApplyFont(WorldInput, FontType.ChatReading, 14);
             if (OutputLabel != null) FontService.ApplyFont(OutputLabel, FontType.ChatReading, 14);
 
@@ -52,7 +71,14 @@ namespace PursualRPG.Scripts.Scenes
             BackButton?.BindAudioAndFont(FontType.SecondaryButton, 13);
             CopyButton?.BindAudioAndFont(FontType.SecondaryButton, 13);
 
-            // Button Wiring
+            // Progressive Visibility Setup: Hide downstream elements initially
+            if (WorldInput != null) WorldInput.Visible = false;
+            if (BtnCompile != null) BtnCompile.Visible = false;
+            if (BtnGenerate != null) BtnGenerate.Visible = false;
+            if (CopyButton != null) CopyButton.Visible = false;
+            if (OutputLabel != null) OutputLabel.Visible = false;
+
+            // Button Wiring[cite: 3]
             if (BtnUnderstand != null) BtnUnderstand.Pressed += OnUnderstandScenario;
             if (BtnCompile != null) BtnCompile.Pressed += OnCompileMechanics;
             if (BtnGenerate != null) BtnGenerate.Pressed += () => _ = OnGenerateWorldAsync();
@@ -69,18 +95,17 @@ namespace PursualRPG.Scripts.Scenes
         {
             if (OutputLabel == null || CopyButton == null) return;
 
-            // Copy BBCode/Raw Text to System Clipboard
             DisplayServer.ClipboardSet(OutputLabel.Text);
 
-            string originalText = CopyButton.Text;
-            CopyButton.Text = "Copied to Clipboard!";
+            string originalIcon = CopyButton.Text;
+            CopyButton.Text = "✓";
             CopyButton.Disabled = true;
 
-            await ToSignal(GetTree().CreateTimer(2.0f), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(GetTree().CreateTimer(1.5f), SceneTreeTimer.SignalName.Timeout);
 
             if (GodotObject.IsInstanceValid(CopyButton))
             {
-                CopyButton.Text = originalText;
+                CopyButton.Text = originalIcon;
                 CopyButton.Disabled = false;
             }
         }
@@ -101,9 +126,19 @@ namespace PursualRPG.Scripts.Scenes
             var active = Scenario.DefaultScenario;
             if (OutputLabel == null) return;
 
+            OutputLabel.Visible = true;
             OutputLabel.Text = "[b]Scenario Guidelines:[/b]\n" +
                                "1. [color=cyan][SYSTEM PROMPT][/color]\n" + active.SystemPrompt + "\n\n" +
                                "2. [color=cyan][INITIAL MESSAGE][/color]\n" + active.InitialMessage;
+
+            // Step 1 Completed: Reveal Input Box with first hint and Step 2 Button
+            if (WorldInput != null)
+            {
+                WorldInput.Visible = true;
+                WorldInput.PlaceholderText = "Adapt the Prompt and initial message for a sci-fi RPG in year 3000/or use exactly this initial message...";
+            }
+            if (BtnCompile != null) BtnCompile.Visible = true;
+            if (CopyButton != null) CopyButton.Visible = true;
         }
 
         private void OnCompileMechanics()
@@ -136,6 +171,13 @@ namespace PursualRPG.Scripts.Scenes
             }
 
             if (OutputLabel != null) OutputLabel.Text = summary.ToString();
+
+            // Step 2 Completed: Change input hint for world creation and reveal Step 3 (Generate)
+            if (WorldInput != null)
+            {
+                WorldInput.PlaceholderText = "Provide overall info on the new RPG scenario you want, whether medieval, fantasy, sci-fi, etc.";
+            }
+            if (BtnGenerate != null) BtnGenerate.Visible = true;
         }
 
         private async Task OnGenerateWorldAsync()
@@ -172,7 +214,7 @@ namespace PursualRPG.Scripts.Scenes
             finally
             {
                 BtnGenerate.Disabled = false;
-                BtnGenerate.Text = Tr("BTN_GENERATE");
+                BtnGenerate.Text = "Gerar novo mundo via IA";
             }
         }
     }

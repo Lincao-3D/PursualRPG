@@ -27,7 +27,7 @@ offset_bottom = 140.0
 grow_horizontal = 2
 placeholder_text = "Enter chronicle concept..."
 
-[node name="OutputView" type="TextEdit" parent="."]
+[node name="OutputContainer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -40,7 +40,26 @@ offset_right = 280.0
 offset_bottom = 180.0
 grow_horizontal = 2
 grow_vertical = 2
-editable = false
+
+[node name="OutputLabel" type="RichTextLabel" parent="OutputContainer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+bbcode_enabled = true
+
+[node name="CopyButton" type="Button" parent="OutputContainer"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = 5.0
+offset_top = -40.0
+offset_right = 45.0
+offset_bottom = 0.0
+text = "📋"
 
 [node name="ActionFooter" type="HBoxContainer" parent="."]
 layout_mode = 1
@@ -68,10 +87,6 @@ text = "Compile"
 [node name="BtnGenerate" type="Button" parent="ActionFooter"]
 layout_mode = 2
 text = "Generate"
-
-[node name="BtnCopyClipboard" type="Button" parent="ActionFooter"]
-layout_mode = 2
-text = "Copy Output"
 
 [node name="BtnBack" type="Button" parent="ActionFooter"]
 layout_mode = 2

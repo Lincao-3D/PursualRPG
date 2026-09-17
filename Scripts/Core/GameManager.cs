@@ -58,6 +58,16 @@ namespace PursualRPG.Scripts.Core
 				bgLayer.Visible = isMenuOrSplash;
 			}
 
+			// Stop music during gameplay scenes, play during menus
+			if (scenePath.EndsWith("CharacterCreatorScene.tscn") || scenePath.EndsWith("ChatScene.tscn") || scenePath.EndsWith("CombatScene.tscn"))
+			{
+				SynthAudioServer.Instance?.StopMusic();
+			}
+			else if (scenePath.EndsWith("MainMenuScene.tscn") || scenePath.EndsWith("OptionsScene.tscn"))
+			{
+				SynthAudioServer.Instance?.PlayDungeonSynthTheme();
+			}
+
 			foreach (var child in uiLayer.GetChildren())
 				child.QueueFree();
 
