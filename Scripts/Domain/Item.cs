@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 
@@ -14,9 +15,10 @@ namespace PursualRPG.Scripts.Domain
         public bool Useless { get; set; }
         public bool IsUsable { get; set; }
         
-        public Action<Player, Entity, Combat> OnUse { get; set; }
+        // Fixed: Added nullable operator '?' to prevent CS8625 warning/error
+        public Action<Player, Entity, Combat>? OnUse { get; set; }
 
-        public GenericItem(int id, string name, string description, int value, bool useless = false, bool isUsable = false, Action<Player, Entity, Combat> onUse = null)
+        public GenericItem(int id, string name, string description, int value, bool useless = false, bool isUsable = false, Action<Player, Entity, Combat>? onUse = null)
         {
             Id = id;
             Name = name;

@@ -14,6 +14,9 @@ namespace PursualRPG.Scripts.Domain
         public Dictionary<int, int> Inventory { get; set; } = new();
         public List<Skill> SelectedSkills { get; set; } = new();
         public List<CharacterExpertise> SelectedExpertises { get; set; } = new();
+        
+        // NEW: Persists chat history across saves and scene transitions
+        public string SavedChatHistory { get; set; } = string.Empty;
 
         // Backward-compatible constructor chaining into the main one
         public Player(string name, CharacterClass clazz, CharacterRace race, Dictionary<CharacterAttrib, int> attributes)

@@ -28,6 +28,9 @@ namespace PursualRPG.Scripts.Scenes
         private Button _characterSheetButton;
         private Button _saveButton;
         private Button _optionsButton;
+        // tracking flags for LLM response streaming and display
+        private bool _isDisplayingText = false;
+        private bool _speedUpRequested = false;
         private TypewriterLabel _streamPreview;
 
         public override void _Ready()
@@ -91,9 +94,26 @@ namespace PursualRPG.Scripts.Scenes
 
         private void InitializeChatHistory()
         {
-            if (_historyText != null) _historyText.Text = $"DM:\n{_scenario.InitialMessage}\n";
+            if (GameManager.Instance.CurrentPlayer != null && !string.IsNullOrEmpty(GameManager.Instance.CurrentPlayer.SavedChatHistory))
+            {
+                // Restore saved chat transcript if returning to an active game
+                if (_historyText != null) _historyText.Text = GameManager.Instance.CurrentPlayer.SavedChatHistory;
+            }
+            else
+            {
+                if (_historyText != null) _historyText.Text = $"DM:\n{_scenario.InitialMessage}\n";
+            }
         }
-
+        public override void _Input(InputEvent @event)
+        {
+            if (_isDisplayingText && @event is InputEventKey keyEvent && keyEvent.Pressed)
+            {
+                if (keyEvent.Keycode == Key.Space || keyEvent.Keycode == Key.Enter || keyEvent.Keycode == Key.KpEnter)
+                {
+                    _speedUpRequested = true;
+                }
+            }
+        }
         private async Task ShowNotificationBarAsync(string text, float durationMs = 2000f)
         {
             var bar = new HorizontalUIBar();
@@ -111,11 +131,19 @@ namespace PursualRPG.Scripts.Scenes
             string speakerName = string.IsNullOrEmpty(card.SpeakerKey) ? "DM" : Tr(card.SpeakerKey);
             _historyText.AppendText($"\n[color=yellow]{speakerName}:[/color] ");
 
+            _isDisplayingText = true;
+            _speedUpRequested = false;
+
+            // Stream text directly to main chat with dynamic speed up on Spacebar
             foreach (char c in card.Text)
             {
                 _historyText.AppendText(c.ToString());
-                await ToSignal(GetTree().CreateTimer(TextSpeed), SceneTreeTimer.SignalName.Timeout);
+                float activeSpeed = _speedUpRequested ? 0.001f : TextSpeed;
+                await ToSignal(GetTree().CreateTimer(activeSpeed), SceneTreeTimer.SignalName.Timeout);
             }
+
+            _isDisplayingText = false;
+            _speedUpRequested = false;
 
             if (_userInput != null) _userInput.Visible = !card.IsNarrative;
             if (_submitButton != null) _submitButton.Visible = !card.IsNarrative;
@@ -183,8 +211,14 @@ namespace PursualRPG.Scripts.Scenes
 
         private void OnSaveButtonPressed()
         {
+            if (GameManager.Instance.CurrentPlayer != null && _historyText != null)
+            {
+                // Capture current chat history into player data before saving JSON
+                GameManager.Instance.CurrentPlayer.SavedChatHistory = _historyText.Text;
+            }
+            
             GameManager.Instance.SaveGame();
-            AppendLog($"\n[color=gray][System: Game progress saved!][/color]\n");
+            AppendLog($"\n[color=gray][System: Game progress and chat history saved!][/color]\n");
             _ = ShowNotificationBarAsync("Game Saved!", 2000f);
         }
 
@@ -205,13 +239,17 @@ namespace PursualRPG.Scripts.Scenes
         private void SendToLLM(string prompt)
         {
             if (MessageBroker == null) return;
+           // Clear out/hide any old preview boxes since we stream directly to chat now
             if (_streamPreview != null)
             {
+                _streamPreview.Visible = false;
                 _streamPreview.Text = string.Empty;
-                _streamPreview.Visible = true;
             }
 
-            MessageBroker.SendMessageAsync(prompt, response => {
+            // Capture everything currently displayed in the chat history log as context
+            string currentHistoryContext = _historyText != null ? _historyText.Text : string.Empty;
+
+            MessageBroker.SendMessageAsync(prompt, currentHistoryContext, response => {
                 CallDeferred(nameof(FinishStreamingResponse), response);
             });
         }

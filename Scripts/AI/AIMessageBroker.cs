@@ -63,8 +63,17 @@ namespace PursualRPG.Scripts.AI
             }
         }
 
+        public void SendMessageAsync(
+            string message,
+            Action<string> onComplete)
+        {
+            SendMessageAsync(message, string.Empty, onComplete);
+        }
+
+        // Full 3-argument implementation with conversation context injection
         public async void SendMessageAsync(
             string message,
+            string chatHistoryContext,
             Action<string> onComplete)
         {
             if (_isGenerating || _llmClient == null)
@@ -77,15 +86,21 @@ namespace PursualRPG.Scripts.AI
                 ActiveScenario?.SystemPrompt ??
                 Scenario.DefaultScenario.SystemPrompt;
 
+            // Ensure LLM receives contextual awareness by prefixing recent dialogue context if desired,
+            // or passing the player's message directly with system instructions.
+            // FIX: Combine previous chat transcript context with the new user message
+            string contextualMessage = string.IsNullOrEmpty(chatHistoryContext) 
+                ? message 
+                : $"[Previous Conversation History]:\n{chatHistoryContext}\n\n[Current Player Input]: {message}";
+
             string response = await _llmClient.GenerateContentAsync(
                 systemPrompt,
-                message);
+                contextualMessage);
 
-            foreach (char character in response)
-                _tokenQueue.Enqueue(character);
-
-            _pendingResponse = response;
-            _pendingCompletion = onComplete;
+            _isGenerating = false;
+            
+            // Directly invoke completion without fake token queue lag
+            onComplete?.Invoke(response);
         }
 
         public bool TryParseResponse(
