@@ -1,7 +1,7 @@
 // Scripts/Core/GameManager.cs
 using Godot;
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using PursualRPG.Scripts.Domain;
 
@@ -15,31 +15,61 @@ namespace PursualRPG.Scripts.Core
 
 		public bool UsePhysicalDice { get; set; }
 
-		private readonly string SavePath = "user://current_save.json";
-
 		public override void _Ready()
 		{
 			Instance = this;
 			ProcessMode = ProcessModeEnum.Always;
 		}
 
-		public bool SaveExists() =>
-			File.Exists(ProjectSettings.GlobalizePath(SavePath));
+		// 1. Point to a visible 'Saves' folder in the project root
+        public string GetSaveDirectory()
+        {
+            string path = ProjectSettings.GlobalizePath("res://Saves");
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+            return path;
+        }
 
-		public void SaveGame()
-		{
-			var json = JsonConvert.SerializeObject(CurrentPlayer, Formatting.Indented);
-			File.WriteAllText(ProjectSettings.GlobalizePath(SavePath), json);
-		}
+		// Search for all .json files in the Godot user directory
+		public string[] GetSaveFiles()
+        {
+            return Directory.GetFiles(GetSaveDirectory(), "*.json")
+                            .Select(Path.GetFileNameWithoutExtension)
+                            .ToArray();
+        }
 
-		public void LoadGame()
-		{
-			if (!SaveExists())
-				return;
+        public bool SaveExists() => GetSaveFiles().Length > 0;
 
-			var json = File.ReadAllText(ProjectSettings.GlobalizePath(SavePath));
-			CurrentPlayer = JsonConvert.DeserializeObject<Player>(json);
-		}
+        public void SaveGame(string saveName = "autosave")
+        {
+            if (string.IsNullOrWhiteSpace(saveName)) saveName = "autosave";
+            
+            var json = JsonConvert.SerializeObject(CurrentPlayer, Formatting.Indented);
+            string filePath = Path.Combine(GetSaveDirectory(), $"{saveName}.json");
+            File.WriteAllText(filePath, json);
+        }
+
+        public void LoadGame(string saveName = "autosave")
+        {
+            string filePath = Path.Combine(GetSaveDirectory(), $"{saveName}.json");
+            if (!File.Exists(filePath)) return;
+
+            var json = File.ReadAllText(filePath);
+            CurrentPlayer = JsonConvert.DeserializeObject<Player>(json);
+
+            // REHYDRATION: Re-link the ignored delegates from the Factory so skills work in combat
+            if (CurrentPlayer?.SelectedSkills != null)
+            {
+                for (int i = 0; i < CurrentPlayer.SelectedSkills.Count; i++)
+                {
+                    var skillEnum = CurrentPlayer.SelectedSkills[i].Enum;
+                    if (SkillFactoryRegistry.SkillFactory.TryGetValue(skillEnum, out var factorySkill))
+                    {
+                        CurrentPlayer.SelectedSkills[i] = factorySkill;
+                    }
+                }
+            }
+        }
+
 
 		public void ChangeScene(string scenePath)
 		{

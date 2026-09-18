@@ -16,6 +16,7 @@ namespace PursualRPG.Scripts.Domain
         public bool IsUsable { get; set; }
         
         // Fixed: Added nullable operator '?' to prevent CS8625 warning/error
+        [Newtonsoft.Json.JsonIgnore]
         public Action<Player, Entity, Combat>? OnUse { get; set; }
 
         public GenericItem(int id, string name, string description, int value, bool useless = false, bool isUsable = false, Action<Player, Entity, Combat>? onUse = null)

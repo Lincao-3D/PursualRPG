@@ -31,6 +31,8 @@ public class Skill
     public bool Passive { get; set; } = false;
     
     // Delegate matching execute behavior with optional raw d20 roll
+    // Add this property attribute to the ExecuteFunc inside the Skill class
+    [Newtonsoft.Json.JsonIgnore]
     public Action<Entity, Entity, Combat, int?> ExecuteFunc { get; set; }
 
     public void Execute(Entity player, Entity target, Combat combat = null, int? rawD20 = null)

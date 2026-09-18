@@ -41,9 +41,23 @@ namespace PursualRPG.Scripts.Scenes
 			}
 
 			_continueButton.Pressed += () => {
-				if (!GameManager.Instance.SaveExists()) return;
-				GameManager.Instance.LoadGame();
-				GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
+				var saves = GameManager.Instance.GetSaveFiles();
+				if (saves.Length == 0) return;
+				
+				string saveList = string.Join(", ", saves);
+				ModalService.Instance.ShowPrompt($"Enter save to load:\nAvailable: {saveList}", saveName => {
+					if (System.Linq.Enumerable.Contains(saves, saveName)) 
+					{
+						GameManager.Instance.LoadGame(saveName);
+						GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
+					} 
+					else if (saves.Length == 1 && string.IsNullOrWhiteSpace(saveName)) 
+					{
+						// Auto-load if there is only 1 save and they just hit enter
+						GameManager.Instance.LoadGame(saves[0]);
+						GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
+					}
+				});
 			};
 			
 			_optionsButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/OptionsScene.tscn");

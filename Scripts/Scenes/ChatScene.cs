@@ -70,7 +70,13 @@ namespace PursualRPG.Scripts.Scenes
             // Wire Sheet, Save, and Options buttons
             if (_characterSheetButton != null) _characterSheetButton.Pressed += ToggleCharacterSheet;
             if (_saveButton != null) _saveButton.Pressed += OnSaveButtonPressed;
-            if (_optionsButton != null) _optionsButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/OptionsScene.tscn");
+            if (_optionsButton != null) 
+            {
+                _optionsButton.Pressed += () => {
+                    SyncChatHistory();
+                    GameManager.Instance.ChangeScene("res://Scenes/OptionsScene.tscn");
+                };
+            }
 
             if (MessageBroker != null) MessageBroker.OnTokenStreamed += OnTokenStreamed;
 
@@ -90,6 +96,22 @@ namespace PursualRPG.Scripts.Scenes
                 _characterSheetPanel.Initialize(GameManager.Instance.CurrentPlayer);
             }
             InitializeChatHistory();
+        }
+
+        private void AutoSave(string saveName = "autosave")
+        {
+            SyncChatHistory();
+            if (GameManager.Instance.CurrentPlayer != null)
+            {
+                GameManager.Instance.SaveGame(saveName);
+            }
+        }
+        private void SyncChatHistory()
+        {
+            if (GameManager.Instance.CurrentPlayer != null && _historyText != null)
+            {
+                GameManager.Instance.CurrentPlayer.SavedChatHistory = _historyText.Text;
+            }
         }
 
         private void InitializeChatHistory()
@@ -168,15 +190,6 @@ namespace PursualRPG.Scripts.Scenes
             text = text.Trim();
             if (string.IsNullOrEmpty(text)) return;
 
-            if (_savingMode)
-            {
-                GameManager.Instance.SaveGame();
-                AppendLog($"\n[color=gray][System: Game saved successfully!][/color]\n");
-                _savingMode = false;
-                _userInput?.Clear();
-                return;
-            }
-
             if (text.StartsWith("/"))
             {
                 HandleCommand(text);
@@ -186,6 +199,10 @@ namespace PursualRPG.Scripts.Scenes
 
             _userInput?.Clear();
             AppendLog($"\n[color=green]Player:[/color]\n{text}\n[color=yellow]DM:[/color]\n");
+            
+            // Trigger an autosave immediately after player speaks
+            AutoSave(); 
+            
             SendToLLM(text);
         }
 
@@ -197,6 +214,7 @@ namespace PursualRPG.Scripts.Scenes
             string command = parts[0].ToLowerInvariant();
             if (command == "quit" || command == "exit")
             {
+                SyncChatHistory();
                 GameManager.Instance.ChangeScene("res://Scenes/MainMenuScene.tscn");
             }
             else if (command == "player" || command == "sheet")
@@ -211,15 +229,14 @@ namespace PursualRPG.Scripts.Scenes
 
         private void OnSaveButtonPressed()
         {
-            if (GameManager.Instance.CurrentPlayer != null && _historyText != null)
-            {
-                // Capture current chat history into player data before saving JSON
-                GameManager.Instance.CurrentPlayer.SavedChatHistory = _historyText.Text;
-            }
-            
-            GameManager.Instance.SaveGame();
-            AppendLog($"\n[color=gray][System: Game progress and chat history saved!][/color]\n");
-            _ = ShowNotificationBarAsync("Game Saved!", 2000f);
+            SyncChatHistory();
+            ModalService.Instance.ShowPrompt("Name this save (or leave blank for 'autosave'):", saveName => {
+                if (string.IsNullOrWhiteSpace(saveName)) saveName = "autosave";
+                
+                AutoSave(saveName);
+                AppendLog($"\n[color=gray][System: Game progress backed up as '{saveName}.json'!][/color]\n");
+                _ = ShowNotificationBarAsync($"Saved: {saveName}.json", 2000f);
+            });
         }
 
         private void OnTokenStreamed(string token)
@@ -273,7 +290,6 @@ namespace PursualRPG.Scripts.Scenes
                 {
                     _ = DisplayChatCardAsync(msg);
                 }
-
                 foreach (var toolCmd in aiResponse.ToolCommands)
                 {
                     ExecuteToolAction(toolCmd);
@@ -283,6 +299,9 @@ namespace PursualRPG.Scripts.Scenes
             {
                 AppendLog($"DM: {responseText}\n");
             }
+            
+            // Trigger an autosave immediately after AI finishes generating and logic applies
+            AutoSave(); 
         }
 
         private void ExecuteToolAction(AIToolCommand command)

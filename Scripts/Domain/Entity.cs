@@ -32,7 +32,7 @@ namespace PursualRPG.Scripts.Domain
             Category = category;
         }
 
-        public virtual void ApplyDamage(Entity target, float damage, DamageType damageType = DamageType.Bludgeoning, Combat combat = null)
+        public virtual void ApplyDamage(Entity target, float damage, DamageType damageType = DamageType.Bludgeoning, Combat? combat = null)
         {
             Health -= (int)damage;
             if (Health <= 0) Die(target, damage);

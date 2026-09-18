@@ -24,16 +24,16 @@ namespace PursualRPG.Scripts.Scenes
 
         public override void _Ready()
         {
-            // Node Fallback Resolution[cite: 3]
-            WorldInput ??= GetNode<TextEdit>("WorldInput");
-            OutputLabel ??= GetNode<RichTextLabel>("OutputLabel");
-            BtnUnderstand ??= GetNode<Button>("ActionFooter/BtnUnderstand");
-            BtnCompile ??= GetNode<Button>("ActionFooter/BtnCompile");
-            BtnGenerate ??= GetNode<Button>("ActionFooter/BtnGenerate");
+            // Node Fallback Resolution with null checks to prevent crashes
+            WorldInput ??= GetNodeOrNull<TextEdit>("WorldInput");
+            OutputLabel ??= GetNodeOrNull<RichTextLabel>("OutputContainer/OutputLabel") ?? GetNodeOrNull<RichTextLabel>("OutputLabel");
+            BtnUnderstand ??= GetNodeOrNull<Button>("ActionFooter/BtnUnderstand");
+            BtnCompile ??= GetNodeOrNull<Button>("ActionFooter/BtnCompile");
+            BtnGenerate ??= GetNodeOrNull<Button>("ActionFooter/BtnGenerate");
             CopyButton ??= GetNodeOrNull<Button>("OutputContainer/CopyButton") 
              ?? GetNodeOrNull<Button>("CopyButton") 
              ?? GetNodeOrNull<Button>("ActionFooter/BtnCopyClipboard");
-            BackButton ??= GetNode<Button>("ActionFooter/BtnBack");
+            BackButton ??= GetNodeOrNull<Button>("ActionFooter/BtnBack");
 
             _llmClient = GetNodeOrNull<LLMClient>("LLMClient") ?? new LLMClient();
             if (_llmClient.GetParent() == null) AddChild(_llmClient);
@@ -71,12 +71,13 @@ namespace PursualRPG.Scripts.Scenes
             BackButton?.BindAudioAndFont(FontType.SecondaryButton, 13);
             CopyButton?.BindAudioAndFont(FontType.SecondaryButton, 13);
 
-            // Progressive Visibility Setup: Hide downstream elements initially
+            // Progressive Visibility Setup: Initial Wizard State
             if (WorldInput != null) WorldInput.Visible = false;
             if (BtnCompile != null) BtnCompile.Visible = false;
             if (BtnGenerate != null) BtnGenerate.Visible = false;
             if (CopyButton != null) CopyButton.Visible = false;
             if (OutputLabel != null) OutputLabel.Visible = false;
+            if (BtnUnderstand != null) BtnUnderstand.Visible = true;
 
             // Button Wiring[cite: 3]
             if (BtnUnderstand != null) BtnUnderstand.Pressed += OnUnderstandScenario;
@@ -137,6 +138,8 @@ namespace PursualRPG.Scripts.Scenes
                 WorldInput.Visible = true;
                 WorldInput.PlaceholderText = "Adapt the Prompt and initial message for a sci-fi RPG in year 3000/or use exactly this initial message...";
             }
+            // Wizard Flow: Hide Step 1, Reveal Step 2
+            if (BtnUnderstand != null) BtnUnderstand.Visible = false;
             if (BtnCompile != null) BtnCompile.Visible = true;
             if (CopyButton != null) CopyButton.Visible = true;
         }
@@ -172,11 +175,14 @@ namespace PursualRPG.Scripts.Scenes
 
             if (OutputLabel != null) OutputLabel.Text = summary.ToString();
 
-            // Step 2 Completed: Change input hint for world creation and reveal Step 3 (Generate)
+            // Step 2 Completed: Clear input for next prompt and reveal Step 3 (Generate)
             if (WorldInput != null)
             {
+                WorldInput.Text = "";
                 WorldInput.PlaceholderText = "Provide overall info on the new RPG scenario you want, whether medieval, fantasy, sci-fi, etc.";
             }
+            // Wizard Flow: Hide Step 2, Reveal Step 3
+            if (BtnCompile != null) BtnCompile.Visible = false;
             if (BtnGenerate != null) BtnGenerate.Visible = true;
         }
 
