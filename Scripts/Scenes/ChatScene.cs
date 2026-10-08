@@ -200,7 +200,7 @@ namespace PursualRPG.Scripts.Scenes
             _userInput?.Clear();
             AppendLog($"\n[color=green]Player:[/color]\n{text}\n[color=yellow]DM:[/color]\n");
             
-            // Trigger an autosave immediately after player speaks
+            SyncChatHistory(); // Added to capture player text
             AutoSave(); 
             
             SendToLLM(text);
@@ -278,17 +278,18 @@ namespace PursualRPG.Scripts.Scenes
                 _streamPreview.Visible = false;
                 _streamPreview.Text = string.Empty;
             }
-            ReceiveLLMResponse(responseText);
+            _ = ReceiveLLMResponseAsync(responseText); 
         }
 
-        private void ReceiveLLMResponse(string responseText)
+        // Convert ReceiveLLMResponse to async Task and add sync logic
+        private async Task ReceiveLLMResponseAsync(string responseText)
         {
             var broker = MessageBroker ?? new AIMessageBroker();
             if (broker.TryParseResponse(responseText, out var aiResponse))
             {
                 foreach (var msg in aiResponse.Messages)
                 {
-                    _ = DisplayChatCardAsync(msg);
+                    await DisplayChatCardAsync(msg); // Await the typing animation
                 }
                 foreach (var toolCmd in aiResponse.ToolCommands)
                 {
@@ -300,8 +301,13 @@ namespace PursualRPG.Scripts.Scenes
                 AppendLog($"DM: {responseText}\n");
             }
             
-            // Trigger an autosave immediately after AI finishes generating and logic applies
-            AutoSave(); 
+
+            // Trigger an export-safe versioned backup automatically instead of overwriting autosave.json
+            // Synchronize the rendered text to CurrentPlayer BEFORE backing up
+            SyncChatHistory();
+            GameManager.Instance.BackupGame();
+            // previous AutoSave feature - Trigger an autosave immediately after AI finishes generating and logic applies
+            // AutoSave(); 
         }
 
         private void ExecuteToolAction(AIToolCommand command)

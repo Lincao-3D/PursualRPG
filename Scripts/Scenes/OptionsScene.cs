@@ -9,7 +9,7 @@ namespace PursualRPG.Scripts.Scenes
         private CheckBox _muteToggle;
         private CheckBox _physicalDiceToggle;
         private Button _worldBuilderButton;
-        private Button _returnButton;
+        private Button _resumeButton;
         private Button _backButton;
 
         public override void _Ready()
@@ -18,7 +18,7 @@ namespace PursualRPG.Scripts.Scenes
             _muteToggle = GetNodeOrNull<CheckBox>("ScrollContainer/MarginContainer/VBoxContainer/MuteToggle") ?? GetNodeOrNull<CheckBox>("ScrollContainer/VBoxContainer/MuteToggle");
             _physicalDiceToggle = GetNodeOrNull<CheckBox>("ScrollContainer/MarginContainer/VBoxContainer/PhysicalDiceToggle") ?? GetNodeOrNull<CheckBox>("ScrollContainer/VBoxContainer/PhysicalDiceToggle");
             _worldBuilderButton = GetNodeOrNull<Button>("ScrollContainer/MarginContainer/VBoxContainer/WorldBuilderButton") ?? GetNodeOrNull<Button>("ScrollContainer/VBoxContainer/WorldBuilderButton");
-            _returnButton = GetNodeOrNull<Button>("ScrollContainer/MarginContainer/VBoxContainer/ReturnButton");
+            _resumeButton = GetNodeOrNull<Button>("ScrollContainer/MarginContainer/VBoxContainer/ResumeButton") ?? GetNodeOrNull<Button>("ScrollContainer/VBoxContainer/ResumeButton");
             _backButton = GetNodeOrNull<Button>("ScrollContainer/MarginContainer/VBoxContainer/BackButton") ?? GetNodeOrNull<Button>("ScrollContainer/VBoxContainer/BackButton");
 
             if (_muteToggle != null)
@@ -57,14 +57,14 @@ namespace PursualRPG.Scripts.Scenes
 
             // Back button checks if a scene is already loaded in the tree, if so it will return to that currently playing scene.
             bool hasActiveGame = GameManager.Instance.CurrentPlayer != null;
-            if (_returnButton != null)
+            if (_resumeButton != null)
             {
-                _returnButton.Visible = hasActiveGame;
+                _resumeButton.Visible = hasActiveGame;
                 if (hasActiveGame)
                 {
-                    _returnButton.Text = "Return to Game";
-                    _returnButton.BindAudioAndFont(FontType.SecondaryButton);
-                    _returnButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
+                    _resumeButton.Text = "Return to Active Game";
+                    _resumeButton.BindAudioAndFont(FontType.SecondaryButton);
+                    _resumeButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
                 }
             }
 

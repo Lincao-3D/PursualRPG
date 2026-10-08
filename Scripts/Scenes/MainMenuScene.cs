@@ -23,6 +23,7 @@ namespace PursualRPG.Scripts.Scenes
 			_optionsButton.Text = Tr("BTN_OPTIONS");
 
 			_newGameButton.BindAudioAndFont(FontType.DefaultMenu, 24);
+			_resumeButton?.BindAudioAndFont(FontType.DefaultMenu, 24);
 			_continueButton.BindAudioAndFont(FontType.DefaultMenu, 24);
 			_optionsButton.BindAudioAndFont(FontType.DefaultMenu, 24);
 
@@ -41,24 +42,30 @@ namespace PursualRPG.Scripts.Scenes
 			}
 
 			_continueButton.Pressed += () => {
-				var saves = GameManager.Instance.GetSaveFiles();
-				if (saves.Length == 0) return;
-				
-				string saveList = string.Join(", ", saves);
-				ModalService.Instance.ShowPrompt($"Enter save to load:\nAvailable: {saveList}", saveName => {
-					if (System.Linq.Enumerable.Contains(saves, saveName)) 
-					{
-						GameManager.Instance.LoadGame(saveName);
-						GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
-					} 
-					else if (saves.Length == 1 && string.IsNullOrWhiteSpace(saveName)) 
-					{
-						// Auto-load if there is only 1 save and they just hit enter
-						GameManager.Instance.LoadGame(saves[0]);
-						GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
-					}
-				});
-			};
+			var saves = GameManager.Instance.GetSaveFiles();
+			if (saves.Length == 0) return;
+			
+			string saveList = string.Join(", ", saves);
+			ModalService.Instance.ShowPrompt($"Enter save to load:\nAvailable: {saveList}", saveName => {
+				saveName = saveName?.Trim(); // Clean whitespace
+
+				if (System.Linq.Enumerable.Contains(saves, saveName)) 
+				{
+					GameManager.Instance.LoadGame(saveName);
+					GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
+				} 
+				else if (saves.Length == 1 && string.IsNullOrWhiteSpace(saveName)) 
+				{
+					GameManager.Instance.LoadGame(saves[0]);
+					GameManager.Instance.ChangeScene("res://Scenes/ChatScene.tscn");
+				}
+				else
+				{
+					// A.4 Fix: Provide feedback on bad name instead of silently failing
+					ModalService.Instance.ShowPrompt($"No save found named '{saveName}'.", _ => {});
+				}
+			});
+		};
 			
 			_optionsButton.Pressed += () => GameManager.Instance.ChangeScene("res://Scenes/OptionsScene.tscn");
 

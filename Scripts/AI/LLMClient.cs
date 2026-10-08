@@ -1,6 +1,8 @@
 using Godot;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace PursualRPG.Scripts.AI
 {
@@ -8,14 +10,17 @@ namespace PursualRPG.Scripts.AI
     {
         private HttpRequest _httpRequest;
         private string _apiKey;
-        private string _modelName = "gemini-3.1-flash-lite"; // Or gemini-2.5-flash, or another configured model
+        private string _modelName = "gemini-3.1-flash-lite";
+
+        // B.1: Internal turn list
+        private readonly List<(string role, string text)> _turns = new();
 
         public override void _Ready()
         {
             _httpRequest = new HttpRequest();
             AddChild(_httpRequest);
             _apiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "";
-            // 2. Fallback logic for local development if you haven't set the system variable yet
+            
             if (string.IsNullOrEmpty(_apiKey))
             {
                 GD.PushWarning("GEMINI_API_KEY environment variable not found. Trying local config...");
@@ -35,23 +40,36 @@ namespace PursualRPG.Scripts.AI
         private void LoadFromLocalConfig()
         {
             var config = new ConfigFile();
-            // Reads from a local file in your project folder
             Error err = config.Load("res://sc_config.cfg");
-            
             if (err == Error.Ok)
             {
                 _apiKey = (string)config.GetValue("api", "GEMINI_API_KEY", "");
             }
         }
 
+        // B.1: Clean state for new games
+        public void ResetConversation() => _turns.Clear();
+
+        // B.3: Inject history once
+        public void SeedConversationHistory(string strippedHistory)
+        {
+            _turns.Clear();
+            _turns.Add(("user", $"[Recap of prior session]:\n{strippedHistory}"));
+            // Insert an artificial model turn so the subsequent player input doesn't trigger a 400 Bad Request (Gemini requires alternating roles)
+            _turns.Add(("model", "Understood. I am ready to continue the campaign based on this history."));
+        }
+
+        // B.1: Stateful multi-turn generation
         public async Task<string> GenerateContentAsync(string systemPrompt, string userMessage)
         {
+            _turns.Add(("user", userMessage));
+
             string url = $"https://generativelanguage.googleapis.com/v1beta/models/{_modelName}:generateContent?key={_apiKey}";
             
             var payload = new
             {
                 system_instruction = new { parts = new[] { new { text = systemPrompt } } },
-                contents = new[] { new { role = "user", parts = new[] { new { text = userMessage } } } }
+                contents = _turns.Select(t => new { role = t.role, parts = new[] { new { text = t.text } } }).ToArray()
             };
 
             string jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
@@ -60,6 +78,7 @@ namespace PursualRPG.Scripts.AI
             var error = _httpRequest.Request(url, headers, HttpClient.Method.Post, jsonPayload);
             if (error != Error.Ok)
             {
+                _turns.RemoveAt(_turns.Count - 1); // Pop user turn on fail
                 return "[Error: Failed to dispatch request]";
             }
 
@@ -84,11 +103,19 @@ namespace PursualRPG.Scripts.AI
                             var parts = content["parts"].AsGodotArray();
                             if (parts.Count > 0)
                             {
-                                return parts[0].AsGodotDictionary()["text"].AsString();
+                                string resultText = parts[0].AsGodotDictionary()["text"].AsString();
+                                _turns.Add(("model", resultText)); // Append model reply
+                                return resultText;
                             }
                         }
                     }
                 }
+            }
+            
+            // Pop the last user turn if the API call failed so retries don't stack duplicates
+            if (_turns.Count > 0 && _turns.Last().role == "user")
+            {
+                _turns.RemoveAt(_turns.Count - 1);
             }
             return $"[API Error Code: {responseCode}]";
         }

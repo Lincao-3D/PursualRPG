@@ -23,6 +23,10 @@ namespace PursualRPG.Scripts.AI
         public delegate void TextTokenStreamHandler(string token);
 
         public event TextTokenStreamHandler OnTokenStreamed;
+
+        public void ResetConversation() => _llmClient?.ResetConversation();
+
+        public void SeedConversationHistory(string history) => _llmClient?.SeedConversationHistory(history);
         
         public override void _Ready()
         {
@@ -63,11 +67,20 @@ namespace PursualRPG.Scripts.AI
             }
         }
 
-        public void SendMessageAsync(
-            string message,
-            Action<string> onComplete)
+        // SendMessageAsync counts with seed wrapper for conversation context, and handles token streaming and completion callback
+        // Simplified to 2 arguments — AI state holds context now
+        public async void SendMessageAsync(string message, Action<string> onComplete)
         {
-            SendMessageAsync(message, string.Empty, onComplete);
+            if (_isGenerating || _llmClient == null) return;
+            _isGenerating = true;
+            _tokenAccumulator = 0.0;
+
+            string systemPrompt = ActiveScenario?.SystemPrompt ?? Scenario.DefaultScenario.SystemPrompt;
+
+            string response = await _llmClient.GenerateContentAsync(systemPrompt, message);
+
+            _isGenerating = false;
+            onComplete?.Invoke(response);
         }
 
         // Full 3-argument implementation with conversation context injection

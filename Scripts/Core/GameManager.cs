@@ -1,5 +1,6 @@
 // Scripts/Core/GameManager.cs
 using Godot;
+using System;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
@@ -22,53 +23,67 @@ namespace PursualRPG.Scripts.Core
 		}
 
 		// 1. Point to a visible 'Saves' folder in the project root
-        public string GetSaveDirectory()
-        {
-            string path = ProjectSettings.GlobalizePath("res://Saves");
-            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-            return path;
-        }
+		public string GetSaveDirectory()
+		{
+			string baseDir = OS.HasFeature("editor")
+				? ProjectSettings.GlobalizePath("res://")
+				: OS.GetExecutablePath().GetBaseDir();
+			string path = Path.Combine(baseDir, "Saves");
+			if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+			return path;
+		}
+
+		// Export-safe directory helper for Backups (A.3)
+		public string GetBackupDirectory()
+		{
+			string baseDir = OS.HasFeature("editor")
+				? ProjectSettings.GlobalizePath("res://")
+				: OS.GetExecutablePath().GetBaseDir();
+			string path = Path.Combine(baseDir, "Backups");
+			if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+			return path;
+		}
 
 		// Search for all .json files in the Godot user directory
 		public string[] GetSaveFiles()
-        {
-            return Directory.GetFiles(GetSaveDirectory(), "*.json")
-                            .Select(Path.GetFileNameWithoutExtension)
-                            .ToArray();
-        }
+		{
+			return Directory.GetFiles(GetSaveDirectory(), "*.json")
+							.Select(Path.GetFileNameWithoutExtension)
+							.ToArray();
+		}
 
-        public bool SaveExists() => GetSaveFiles().Length > 0;
+		public bool SaveExists() => GetSaveFiles().Length > 0;
 
-        public void SaveGame(string saveName = "autosave")
-        {
-            if (string.IsNullOrWhiteSpace(saveName)) saveName = "autosave";
-            
-            var json = JsonConvert.SerializeObject(CurrentPlayer, Formatting.Indented);
-            string filePath = Path.Combine(GetSaveDirectory(), $"{saveName}.json");
-            File.WriteAllText(filePath, json);
-        }
+		public void SaveGame(string saveName = "autosave")
+		{
+			if (string.IsNullOrWhiteSpace(saveName)) saveName = "autosave";
+			
+			var json = JsonConvert.SerializeObject(CurrentPlayer, Formatting.Indented);
+			string filePath = Path.Combine(GetSaveDirectory(), $"{saveName}.json");
+			File.WriteAllText(filePath, json);
+		}
 
-        public void LoadGame(string saveName = "autosave")
-        {
-            string filePath = Path.Combine(GetSaveDirectory(), $"{saveName}.json");
-            if (!File.Exists(filePath)) return;
+		public void LoadGame(string saveName = "autosave")
+		{
+			string filePath = Path.Combine(GetSaveDirectory(), $"{saveName}.json");
+			if (!File.Exists(filePath)) return;
 
-            var json = File.ReadAllText(filePath);
-            CurrentPlayer = JsonConvert.DeserializeObject<Player>(json);
+			var json = File.ReadAllText(filePath);
+			CurrentPlayer = JsonConvert.DeserializeObject<Player>(json);
 
-            // REHYDRATION: Re-link the ignored delegates from the Factory so skills work in combat
-            if (CurrentPlayer?.SelectedSkills != null)
-            {
-                for (int i = 0; i < CurrentPlayer.SelectedSkills.Count; i++)
-                {
-                    var skillEnum = CurrentPlayer.SelectedSkills[i].Enum;
-                    if (SkillFactoryRegistry.SkillFactory.TryGetValue(skillEnum, out var factorySkill))
-                    {
-                        CurrentPlayer.SelectedSkills[i] = factorySkill;
-                    }
-                }
-            }
-        }
+			// REHYDRATION: Re-link the ignored delegates from the Factory so skills work in combat
+			if (CurrentPlayer?.SelectedSkills != null)
+			{
+				for (int i = 0; i < CurrentPlayer.SelectedSkills.Count; i++)
+				{
+					var skillEnum = CurrentPlayer.SelectedSkills[i].Enum;
+					if (SkillFactoryRegistry.SkillFactory.TryGetValue(skillEnum, out var factorySkill))
+					{
+						CurrentPlayer.SelectedSkills[i] = factorySkill;
+					}
+				}
+			}
+		}
 
 
 		public void ChangeScene(string scenePath)
@@ -110,6 +125,15 @@ namespace PursualRPG.Scripts.Core
 
 			var screen = packedScene.Instantiate<Control>();
 			uiLayer.AddChild(screen);
+		}
+
+		public void BackupGame()
+		{
+			if (CurrentPlayer == null) return;
+			string safeName = string.IsNullOrWhiteSpace(CurrentPlayer.Name) ? "unnamed" : CurrentPlayer.Name;
+			string fileName = $"{safeName}_{DateTime.Now:yyyyMMdd_HHmmss_fff}.json";
+			var json = JsonConvert.SerializeObject(CurrentPlayer, Formatting.Indented);
+			File.WriteAllText(Path.Combine(GetBackupDirectory(), fileName), json);
 		}
 	}
 }
