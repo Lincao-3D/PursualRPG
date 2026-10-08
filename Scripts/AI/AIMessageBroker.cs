@@ -75,8 +75,9 @@ namespace PursualRPG.Scripts.AI
             _isGenerating = true;
             _tokenAccumulator = 0.0;
 
-            string systemPrompt = ActiveScenario?.SystemPrompt ?? Scenario.DefaultScenario.SystemPrompt;
-
+            string baseSystemPrompt = ActiveScenario?.SystemPrompt ?? Scenario.DefaultScenario.SystemPrompt;
+            string systemPrompt = AIToolRegistry.BuildDynamicSystemPrompt(Core.GameManager.Instance.CurrentPlayer, ActiveScenario ?? Scenario.DefaultScenario);
+            
             string response = await _llmClient.GenerateContentAsync(systemPrompt, message);
 
             _isGenerating = false;

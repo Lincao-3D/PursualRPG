@@ -3,6 +3,17 @@ using System.Collections.Generic;
 
 namespace PursualRPG.Scripts.Domain
 {
+    public class NarrationState
+    {
+        public string ShortTerm { get; set; } = string.Empty;
+        public string MediumTerm { get; set; } = string.Empty;
+        public string LongTerm { get; set; } = string.Empty;
+        
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasPlans => !string.IsNullOrEmpty(ShortTerm) || 
+                                !string.IsNullOrEmpty(MediumTerm) || 
+                                !string.IsNullOrEmpty(LongTerm);
+    }
     public class Player : Entity
     {
         public CharacterRace Race { get; set; }
@@ -16,8 +27,10 @@ namespace PursualRPG.Scripts.Domain
         public List<Skill> SelectedSkills { get; set; } = new();
         public List<CharacterExpertise> SelectedExpertises { get; set; } = new();
         
-        // NEW: Persists chat history across saves and scene transitions
+        // implementation: Persists chat history across saves and scene transitions
         public string SavedChatHistory { get; set; } = string.Empty;
+        // implementation: Tracks AI's internal pacing and narrative goals
+        public NarrationState NarrationPlans { get; set; } = new();
 
         // Backward-compatible constructor chaining into the main one
         public Player(string name, CharacterClass clazz, CharacterRace race, Dictionary<CharacterAttrib, int> attributes)

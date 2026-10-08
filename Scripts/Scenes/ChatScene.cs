@@ -314,9 +314,44 @@ namespace PursualRPG.Scripts.Scenes
         {
             if (command.Name == "initialize_combat")
             {
-                var enemies = new List<Entity> { MonsterFactory.GetFactories()[EnemyEnum.Skeleton] };
-                _eminentCombat = new Combat(GameManager.Instance.CurrentPlayer, enemies, fleeable: true);
+                var enemiesList = new List<Entity>();
+                var factories = MonsterFactory.GetFactories();
+
+                // C.1: Parse the enemies array from the AI's arguments
+                if (command.Arguments.TryGetValue("enemies", out var enemiesElem) && enemiesElem.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var enemyItem in enemiesElem.EnumerateArray())
+                    {
+                        string eName = enemyItem.GetString();
+                        if (Enum.TryParse<EnemyEnum>(eName, true, out var eEnum) && factories.ContainsKey(eEnum))
+                        {
+                            // Create a distinct instance so multiple of the same enemy don't share reference memory
+                            var template = factories[eEnum];
+                            enemiesList.Add(new Entity(template.Name, template.MaxHealth, template.Armor, template.Dodge, template.BaseDamage, template.Attributes, template.Category));
+                        }
+                    }
+                }
+
+                // Safety fallback: if parsing fails or array was empty, spawn a Skeleton
+                if (enemiesList.Count == 0)
+                {
+                    var fallback = factories[EnemyEnum.Skeleton];
+                    enemiesList.Add(new Entity(fallback.Name, fallback.MaxHealth, fallback.Armor, fallback.Dodge, fallback.BaseDamage, fallback.Attributes, fallback.Category));
+                }
+
+                _eminentCombat = new Combat(GameManager.Instance.CurrentPlayer, enemiesList, fleeable: true);
                 WaitCombatConfirm(_eminentCombat);
+            }
+            else if (command.Name == "update_plans")
+            {
+                // Elaboration: Save the AI's structural plans silently
+                if (GameManager.Instance.CurrentPlayer != null)
+                {
+                    var plans = GameManager.Instance.CurrentPlayer.NarrationPlans;
+                    if (command.Arguments.TryGetValue("short", out var s) && s.ValueKind == JsonValueKind.String) plans.ShortTerm = s.GetString();
+                    if (command.Arguments.TryGetValue("medium", out var m) && m.ValueKind == JsonValueKind.String) plans.MediumTerm = m.GetString();
+                    if (command.Arguments.TryGetValue("long", out var l) && l.ValueKind == JsonValueKind.String) plans.LongTerm = l.GetString();
+                }
             }
             else if (command.Name == "reward_player")
             {
